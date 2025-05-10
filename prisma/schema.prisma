@@ -1,0 +1,47 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// 圖片表：一張新聞可有多張圖，一張圖屬於（可選）一則新聞
+model Image {
+  id        String   @id @default(cuid())
+  url       String
+  path      String
+  newsId    String? // 外鍵
+  news      News?    @relation(fields: [newsId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+/// 新聞表
+model News {
+  id          String   @id @default(cuid())
+  homeTitle   String
+  title       String
+  subtitle    String?
+  contentMD   String
+  contentHTML String
+  coverImage  String?
+  createdAt   DateTime @default(now())
+
+  // 圖片（一對多）
+  images Image[]
+
+  // 標籤（多對多，隱式關聯表由 Prisma 自動建立）
+  tags Tag[]
+}
+
+/// 標籤表
+model Tag {
+  id   String @id @default(cuid())
+  name String @unique
+
+  // 多對多
+  news News[]
+}
