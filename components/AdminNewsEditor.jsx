@@ -92,8 +92,17 @@ export default function NewsEditor({ initialData }) {
     const [newTagName, setNewTagName] = useState("");
     const [images, setImages] = useState([]);
     const [isUploading, setIsUploading] = useState(false);
-    const [coverImage, setCoverImage] = useState(initialData?.coverImage || null);
-    const [references, setReferences] = useState([""]);
+    const [coverImage, setCoverImage] = useState(initialData?.coverImage ? {
+        id: initialData.coverImage.id,
+        url: initialData.coverImage.url,
+        path: initialData.coverImage.path
+    } : null);
+    // 初始化參考資料，確保至少有一個空參考
+    const [references, setReferences] = useState(
+        Array.isArray(initialData?.references) && initialData.references.length > 0 
+            ? initialData.references 
+            : [{ id: '', url: '', title: '' }]
+    );
     const [copiedStates, setCopiedStates] = useState({});
     
     const uploadRef = useRef(null);
@@ -309,36 +318,62 @@ export default function NewsEditor({ initialData }) {
 
     const handleSave = async () => {
         try {
+            // 表單驗證
+            if (!title.trim()) {
+                throw new Error('請輸入標題');
+            }
+            if (!content.trim()) {
+                throw new Error('請輸入內容');
+            }
+            if (!coverImage) {
+                const confirmed = confirm('您尚未設置封面圖片，確定要繼續嗎？');
+                if (!confirmed) return;
+            }
+    
             const payload = {
-                title: homeTitle, // 使用 homeTitle 作為 title，因為表單中沒有單獨的 title 欄位
-                homeTitle,
-                tags: selectedTags,
+                title: title.trim(),
+                homeTitle: homeTitle.trim() || title.trim(),
                 contentMD: content,
-                contentHTML: content, // 暫時使用與 contentMD 相同的內容，之後應該轉換為 HTML
-                imageIds: images.map((img) => img.id),
-                coverImageId: coverImage?.id || null,
-                coverImage: coverImage?.url || null, // 添加封面圖片 URL
-                images: images.map(img => ({ url: img.url, path: img.path })), // 添加圖片陣列
-                references,
-                tagNames: Array.isArray(selectedTags) ? selectedTags : [], // 確保 tagNames 是陣列
+                contentHTML: content,
+                coverImage: coverImage?.url || null,
+                tagNames: Array.isArray(selectedTags) ? selectedTags : [],
+                images: images.map(img => ({
+                    id: img.id,
+                    url: img.url,
+                    path: img.path
+                })),
+                references: references
+                    .filter(ref => ref.url && ref.url.trim() !== '')
+                    .map(({ url, title }) => ({
+                        url: url.trim(),
+                        title: (title || '').trim()
+                    }))
             };
+            
             console.log('Saving with payload:', payload);
             
-            const method = newsId ? "PATCH" : "POST";
-            const url = newsId ? `/api/news/${newsId}` : "/api/news";
+            // 使用 PUT 進行更新，POST 進行創建
+            const method = newsId ? 'PUT' : 'POST';
+            const url = newsId ? `/api/news/${newsId}` : '/api/news';
+            
             const response = await fetch(url, {
                 method,
-                headers: { "Content-Type": "application/json" },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
             });
             
+            const responseData = await response.json().catch(() => ({}));
+            
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                console.error('Save failed:', errorData);
-                throw new Error(errorData.message || '儲存失敗');
+                console.error('Save failed:', responseData);
+                throw new Error(responseData.error || responseData.message || '儲存失敗');
             }
             
-            router.push("/admin");
+            // 顯示成功消息並導航
+            alert(newsId ? '文章更新成功！' : '文章創建成功！');
+            router.push('/admin');
+            router.refresh(); // 確保頁面數據是最新的
+            
         } catch (error) {
             console.error('Error saving article:', error);
             alert(`儲存失敗: ${error.message || '未知錯誤'}`);
@@ -456,12 +491,18 @@ export default function NewsEditor({ initialData }) {
                         <div className="relative group">
                             <img 
                                 src={coverImage.url} 
-                                alt="Cover" 
+                                alt="封面圖片" 
                                 className="w-32 h-32 object-cover rounded-md border"
+                                onError={(e) => {
+                                    e.target.onerror = null;
+                                    e.target.src = '/placeholder.svg';
+                                }}
                             />
                             <button
+                                type="button"
                                 onClick={() => setCoverImage(null)}
                                 className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                aria-label="移除封面圖片"
                             >
                                 <X className="w-4 h-4" />
                             </button>
@@ -886,49 +927,61 @@ export default function NewsEditor({ initialData }) {
             </Split>
 
             <div className="mt-12 border-t border-gray-200 dark:border-gray-700 pt-8 mb-8">
-                <h3 className="text-xl font-semibold mb-6">參考資料</h3>
-                <div className="space-y-4">
-                    {references.map((ref, idx) => (
-                        <div key={idx} className="flex items-start gap-2 group">
-                            <div className="mt-2 w-6 flex-shrink-0">{idx + 1}.</div>
-                            <div className="flex-1 flex items-start gap-2">
-                                <textarea
-                                    className="w-full p-2 border rounded resize-y min-h-[60px] dark:bg-gray-800 dark:border-gray-700"
-                                    value={ref}
-                                    rows={1}
-                                    onChange={(e) => {
-                                        const newRefs = [...references];
-                                        newRefs[idx] = e.target.value;
-                                        setReferences(newRefs);
-                                    }}
-                                    placeholder="請輸入參考資料連結或說明"
-                                />
-                                <Button 
-                                    type="button" 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={() => {
-                                        const newRefs = references.filter((_, i) => i !== idx);
-                                        setReferences(newRefs);
-                                    }}
-                                >
-                                    <Trash2 className="w-4 h-4 text-red-500" />
-                                </Button>
-                            </div>
-                        </div>
-                    ))}
+    <h3 className="text-xl font-semibold mb-6">參考資料</h3>
+    <div className="space-y-4">
+        {references.map((ref, idx) => (
+            <div key={ref.id || idx} className="flex items-start gap-2 group">
+                <div className="mt-2 w-6 flex-shrink-0">{idx + 1}.</div>
+                <div className="flex-1 flex items-start gap-2">
+                    <input
+                        type="text"
+                        className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700"
+                        placeholder="參考資料網址"
+                        value={ref.url || ''}
+                        onChange={(e) => {
+                            const newRefs = [...references];
+                            newRefs[idx] = { ...newRefs[idx], url: e.target.value };
+                            setReferences(newRefs);
+                        }}
+                    />
+                    <input
+                        type="text"
+                        className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700"
+                        placeholder="參考資料標題 (選填)"
+                        value={ref.title || ''}
+                        onChange={(e) => {
+                            const newRefs = [...references];
+                            newRefs[idx] = { ...newRefs[idx], title: e.target.value };
+                            setReferences(newRefs);
+                        }}
+                    />
                     <Button 
                         type="button" 
-                        variant="outline" 
-                        size="sm" 
-                        className="mt-2"
-                        onClick={() => setReferences([...references, ""])}
+                        variant="ghost" 
+                        size="icon" 
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => {
+                            const newRefs = references.filter((_, i) => i !== idx);
+                            setReferences(newRefs);
+                        }}
                     >
-                        新增參考資料
+                        <Trash2 className="w-4 h-4 text-red-500" />
                     </Button>
                 </div>
             </div>
+        ))}
+        <Button 
+            type="button" 
+            variant="outline" 
+            size="sm" 
+            className="mt-2"
+            onClick={() => setReferences([...references, { id: '', url: '', title: '' }])}
+        >
+            新增參考資料
+        </Button>
+    </div>
+</div>
+
 
 
         </div>

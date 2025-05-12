@@ -35,6 +35,9 @@ model News {
 
   // 標籤（多對多，隱式關聯表由 Prisma 自動建立）
   tags Tag[]
+  
+  // 參考資料（一對多）
+  references Reference[]
 }
 
 /// 標籤表
@@ -44,4 +47,14 @@ model Tag {
 
   // 多對多
   news News[]
+}
+
+/// 參考資料表
+model Reference {
+  id      String   @id @default(cuid())
+  url     String
+  title   String?
+  newsId  String
+  news    News     @relation(fields: [newsId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 }

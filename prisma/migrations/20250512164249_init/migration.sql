@@ -32,6 +32,17 @@ CREATE TABLE "Tag" (
 );
 
 -- CreateTable
+CREATE TABLE "Reference" (
+    "id" TEXT NOT NULL,
+    "url" TEXT NOT NULL,
+    "title" TEXT,
+    "newsId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Reference_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "_NewsToTag" (
     "A" TEXT NOT NULL,
     "B" TEXT NOT NULL,
@@ -47,6 +58,9 @@ CREATE INDEX "_NewsToTag_B_index" ON "_NewsToTag"("B");
 
 -- AddForeignKey
 ALTER TABLE "Image" ADD CONSTRAINT "Image_newsId_fkey" FOREIGN KEY ("newsId") REFERENCES "News"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Reference" ADD CONSTRAINT "Reference_newsId_fkey" FOREIGN KEY ("newsId") REFERENCES "News"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_NewsToTag" ADD CONSTRAINT "_NewsToTag_A_fkey" FOREIGN KEY ("A") REFERENCES "News"("id") ON DELETE CASCADE ON UPDATE CASCADE;
