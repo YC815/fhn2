@@ -1,8 +1,8 @@
-import { SignIn } from "@clerk/nextjs";
+import { SignUp } from "@clerk/nextjs";
 import { redirect } from 'next/navigation';
 import { auth } from '@clerk/nextjs/server';
 
-export default function SignInPage() {
+export default function SignUpPage() {
   const { userId } = auth();
 
   // 如果用戶已經登入，則重定向到管理頁面
@@ -15,14 +15,14 @@ export default function SignInPage() {
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            管理員登入
+            註冊管理員帳號
           </h2>
         </div>
         <div className="mt-8">
-          <SignIn 
-            path="/admin/login" 
-            routing="path" 
-            signUpUrl="/admin/sign-up"
+          <SignUp 
+            path="/admin/sign-up" 
+            routing="path"
+            signInUrl="/admin/login"
             appearance={{
               elements: {
                 card: 'shadow-lg rounded-2xl',

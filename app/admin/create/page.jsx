@@ -2,5 +2,9 @@
 import AdminNewsEditor from "@/components/AdminNewsEditor";
 
 export default function NewNewsPage() {
-    return <AdminNewsEditor />;
+    return (
+        <div className="py-14">
+            <AdminNewsEditor />
+        </div>
+    );
 }

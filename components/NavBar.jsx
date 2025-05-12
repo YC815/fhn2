@@ -12,7 +12,7 @@ export function NavBar() {
 
 
     return (
-        <header className="sticky top-0 z-50 flex items-center justify-between px-6 py-4 bg-gray-100 dark:bg-zinc-800 shadow">            {/* 左上角 Logo */}
+        <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-zinc-700">            {/* 左上角 Logo */}
             <Link href="/" className="flex items-center space-x-2">
                 <Image
                     src="/favicon.ico"
