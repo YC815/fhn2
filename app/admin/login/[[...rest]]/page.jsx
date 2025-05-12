@@ -1,13 +1,23 @@
+'use client';
+
 import { SignIn } from "@clerk/nextjs";
-import { redirect } from 'next/navigation';
-import { auth } from '@clerk/nextjs/server';
+import { useAuth } from "@clerk/nextjs";
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function SignInPage() {
-  const { userId } = auth();
+  const { isLoaded, userId } = useAuth();
+  const router = useRouter();
 
   // 如果用戶已經登入，則重定向到管理頁面
-  if (userId) {
-    redirect('/admin');
+  useEffect(() => {
+    if (isLoaded && userId) {
+      router.push('/admin');
+    }
+  }, [isLoaded, userId, router]);
+
+  if (!isLoaded) {
+    return null; // 或者加載指示器
   }
 
   return (

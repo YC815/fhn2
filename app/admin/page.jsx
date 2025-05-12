@@ -1,43 +1,91 @@
 'use client';
 
-import { UserButton, useUser } from "@clerk/nextjs";
+import { UserButton, useUser, useAuth } from "@clerk/nextjs";
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
+// 管理員電子郵件白名單
+const ADMIN_EMAILS = [
+  'yushun@fhn.com',
+  'admin@example.com',
+  'yushun@chen.zone'
+];
+
 export default function AdminDashboard() {
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const { getToken } = useAuth();
   const router = useRouter();
   const [newsList, setNewsList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // 檢查登入狀態
+  // 檢查登入狀態和權限
   useEffect(() => {
-    if (isLoaded && !isSignedIn) {
-      router.push('/admin/login');
-    }
-  }, [isLoaded, isSignedIn, router]);
+    const checkAuth = async () => {
+      if (!isLoaded) return;
+      
+      // 如果未登入，重定向到登入頁面
+      if (!isSignedIn) {
+        router.push('/admin/login');
+        return;
+      }
 
-  // 載入新聞列表
-  useEffect(() => {
-    const fetchNews = async () => {
       try {
-        const response = await fetch('/api/news');
-        const data = await response.json();
-        setNewsList(data);
+        // 檢查用戶電子郵件是否在白名單中
+        const email = user.primaryEmailAddress?.emailAddress;
+        console.log('Current user email:', email);
+        
+        if (!email) {
+          throw new Error('無法獲取用戶電子郵件');
+        }
+
+        const isAdmin = ADMIN_EMAILS.includes(email);
+        console.log('Is admin:', isAdmin);
+        
+        if (!isAdmin) {
+          // 如果不是管理員，重定向到首頁
+          console.log('權限不足，重定向到首頁');
+          router.push('/');
+          return;
+        }
+        
+        // 如果是管理員，設置已授權標記
+        setIsAuthorized(true);
       } catch (error) {
-        console.error('載入新聞失敗:', error);
+        console.error('檢查權限時出錯:', error);
+        router.push('/');
       } finally {
-        setIsLoading(false);
+        setIsCheckingAuth(false);
       }
     };
 
-    if (isLoaded && isSignedIn) {
+    checkAuth();
+  }, [isLoaded, isSignedIn, user, router]);
+
+  // 載入新聞列表
+  useEffect(() => {
+    if (isAuthorized && isSignedIn) {
+      const fetchNews = async () => {
+        try {
+          setIsLoading(true);
+          const response = await fetch('/api/news');
+          const data = await response.json();
+          setNewsList(data);
+        } catch (error) {
+          console.error('載入新聞失敗:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
       fetchNews();
     }
-  }, [isLoaded, isSignedIn]);
+  }, [isAuthorized, isSignedIn]);
 
-  if (!isLoaded || isLoading) {
+  // 如果正在檢查權限或加載中，顯示加載動畫
+  if (isCheckingAuth || isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
