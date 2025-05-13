@@ -1,33 +1,23 @@
-// app/news/[id]/page.jsx
-import { notFound } from "next/navigation";
-import { headers } from "next/headers";
-import NewsContent from "./NewsContent";
+"use client";
+import React from "react";
+import MarkdownContent from "./MarkdownContent";
+import Image from "next/image";
 
-export default async function NewsPage({ params }) {
-  const { id } = params;
-  // 在伺服器端抓取該篇新聞資料，避免快取
-  const res = await fetch(`/api/news/${id}`, { cache: "no-store" });
-  if (!res.ok) {
-    // 請求失敗時顯示 404
-    return notFound();
-  }
-  const news = await res.json();
-
+export default function NewsContent({ news }) {
   return (
-    <article className="prose prose-lg mx-auto py-12 px-4 dark:prose-invert">
-      {/* 封面圖片 */}
-      {news.coverImage && (
-        <div className="mb-8">
-          <Image
-            src={news.coverImage}
-            alt={news.title}
-            width={1200}
-            height={600}
-            className="rounded-lg object-cover"
-          />
-        </div>
-      )}
-
+    <article className="relative prose prose-lg mx-auto py-20 px-4 dark:prose-invert ">
+      {/* 返回主頁按鈕 */}
+      <div className="absolute left-0 top-0">
+        <a href="/" className="inline-block">
+          <button
+            type="button"
+            className="flex items-center gap-1 px-3 py-2 rounded hover:bg-muted transition-colors border border-input bg-background text-foreground shadow-sm mt-2 ml-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+            返回主頁
+          </button>
+        </a>
+      </div>
       {/* 標題 & 副標題 */}
       <h1 className="text-4xl font-bold mb-2">{news.homeTitle}</h1>
       <h2 className="text-2xl text-zinc-600 dark:text-zinc-400 mb-6">
@@ -47,11 +37,8 @@ export default async function NewsPage({ params }) {
         ))}
       </div>
 
-      {/* 文章內容（已安全轉譯成 HTML） */}
-      <div
-        className="prose prose-zinc dark:prose-invert"
-        dangerouslySetInnerHTML={{ __html: news.contentHTML }}
-      />
+      {/* 文章內容（Markdown 顯示，圖片自動置中） */}
+      <MarkdownContent content={news.content} />
 
       {/* 圖片列表 */}
       {news.images.length > 0 && (
