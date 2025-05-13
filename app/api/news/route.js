@@ -1,43 +1,80 @@
 // app/api/news/route.js
 import { NextResponse } from "next/server";
+import supabase from "@/utils/supabase";
 import { prisma } from "@/lib/prisma";
 
 // GET /api/news?tags=AI,新聞
 export async function GET(request) {
   try {
     console.log('正在執行 GET /api/news API');
-    console.log('資料庫環境變數存在:', Boolean(process.env.DATABASE_URL));
+    console.log('Supabase 環境變數存在:', Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL));
+    console.log('Prisma 環境變數存在:', Boolean(process.env.DATABASE_URL));
     
     const { searchParams } = new URL(request.url);
     const tagsParam = searchParams.get("tags");
     console.log('標籤過濾參數:', tagsParam || '無');
     
-    const filter = tagsParam
-      ? {
-          tags: { some: { name: { in: tagsParam.split(",") } } },
-        }
-      : {};
-
-    // 測試資料庫連接
+    // 先嘗試使用 Prisma
     try {
+      const filter = tagsParam
+        ? {
+            tags: { some: { name: { in: tagsParam.split(",") } } },
+          }
+        : {};
+
+      // 測試資料庫連接
       await prisma.$queryRaw`SELECT 1`;
       console.log('資料庫連接測試成功');
-    } catch (dbTestError) {
-      console.error('資料庫連接測試失敗:', dbTestError);
-      return NextResponse.json(
-        { error: '資料庫連接失敗', details: dbTestError.message },
-        { status: 500 }
-      );
-    }
+      
+      const list = await prisma.news.findMany({
+        where: filter,
+        include: { images: true, tags: true },
+        orderBy: { createdAt: "desc" },
+      });
+      
+      console.log(`成功使用 Prisma 獲取 ${list.length} 條新聞記錄`);
+      return NextResponse.json(list);
+    } catch (prismaError) {  
+      console.log('使用 Prisma 失敗，嘗試 Supabase:', prismaError.message);
 
-    const list = await prisma.news.findMany({
-      where: filter,
-      include: { images: true, tags: true },
-      orderBy: { createdAt: "desc" },
-    });
-    
-    console.log(`成功獲取 ${list.length} 條新聞記錄`);
-    return NextResponse.json(list);
+      // 如果 Prisma 失敗，嘗試使用 Supabase
+      // 取得所有新聞
+      let query = supabase.from('news').select(`
+        *,
+        images (*),
+        news_tags (tag_id, tags (name))
+      `).order('created_at', { ascending: false });
+      
+      // 如果有標籤過濾
+      if (tagsParam) {
+        const tagNames = tagsParam.split(",");
+        // 這裡假設您的 Supabase 數據結構中有 news_tags 中間表和 tags 表
+        query = query.in('news_tags.tags.name', tagNames);
+      }
+
+      // 執行查詢
+      const { data: list, error: queryError } = await query;
+      
+      if (queryError) {
+        console.error('Supabase 查詢錯誤:', queryError);
+        throw new Error(`Supabase 查詢錯誤: ${queryError.message}`);  
+      }
+      
+      // 轉換資料格式以符合現有前端需求
+      const formattedList = list.map(news => ({
+        ...news,
+        homeTitle: news.home_title || news.title,
+        contentMD: news.content_md,
+        contentHTML: news.content_html,
+        coverImage: news.cover_image,
+        createdAt: news.created_at,
+        updatedAt: news.updated_at,
+        tags: news.news_tags?.map(nt => ({ name: nt.tags.name })) || [],
+      }));
+      
+      console.log(`成功使用 Supabase 獲取 ${formattedList.length} 條新聞記錄`);
+      return NextResponse.json(formattedList);
+    }
   } catch (error) {
     // 印出完整 error 物件
     console.error('🚨 /api/news error:', error);
@@ -58,38 +95,147 @@ export async function GET(request) {
 // POST /api/news
 // body: { homeTitle, title, subtitle?, contentMD, contentHTML, coverImage?, tagNames: string[], images: [{url,path}] }
 export async function POST(request) {
-  const {
-    homeTitle,
-    title,
-    subtitle,
-    contentMD,
-    contentHTML,
-    coverImage,
-    tagNames = [],
-    images = [],
-  } = await request.json();
-
-  const created = await prisma.news.create({
-    data: {
+  try {
+    const {
       homeTitle,
       title,
       subtitle,
       contentMD,
       contentHTML,
       coverImage,
-      tags: {
-        connectOrCreate: tagNames.map((name) => ({
-          where: { name },
-          create: { name },
-        })),
-      },
-      images: {
-        create: images
-          .filter((img) => !img.id)
-          .map(({ url, path, newsId }) => ({ url, path, newsId })),
-      },
-    },
-    include: { images: true, tags: true },
-  });
-  return NextResponse.json(created, { status: 201 });
+      tagNames = [],
+      images = [],
+    } = await request.json();
+
+    // 先嘗試使用 Prisma
+    try {
+      // 使用 Prisma 創建新聞
+      const created = await prisma.news.create({
+        data: {
+          homeTitle,
+          title,
+          subtitle,
+          contentMD,
+          contentHTML,
+          coverImage,
+          tags: {
+            connectOrCreate: tagNames.map((name) => ({
+              where: { name },
+              create: { name },
+            })),
+          },
+          images: {
+            create: images
+              .filter((img) => !img.id)
+              .map(({ url, path, newsId }) => ({ url, path, newsId })),
+          },
+        },
+        include: { images: true, tags: true },
+      });
+      return NextResponse.json(created, { status: 201 });
+    } catch (prismaError) {
+      console.log('使用 Prisma 創建新聞失敗，嘗試 Supabase:', prismaError.message);
+      
+      // 如果 Prisma 失敗，嘗試使用 Supabase
+      // 1. 創建新聞文章
+      const { data: newsData, error: newsError } = await supabase
+        .from('news')
+        .insert({
+          home_title: homeTitle,
+          title,
+          subtitle,
+          content_md: contentMD,
+          content_html: contentHTML,
+          cover_image: coverImage,
+          created_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (newsError) throw newsError;
+
+      // 2. 處理標籤
+      for (const tagName of tagNames) {
+        // 檢查標籤是否存在，不存在則創建
+        const { data: existingTag, error: tagError } = await supabase
+          .from('tags')
+          .select('id')
+          .eq('name', tagName)
+          .maybeSingle();
+
+        if (tagError) throw tagError;
+
+        let tagId;
+        if (existingTag) {
+          tagId = existingTag.id;
+        } else {
+          // 創建新標籤
+          const { data: newTag, error: createTagError } = await supabase
+            .from('tags')
+            .insert({ name: tagName })
+            .select()
+            .single();
+
+          if (createTagError) throw createTagError;
+          tagId = newTag.id;
+        }
+
+        // 關聯新聞和標籤
+        const { error: linkError } = await supabase
+          .from('news_tags')
+          .insert({
+            news_id: newsData.id,
+            tag_id: tagId
+          });
+
+        if (linkError) throw linkError;
+      }
+
+      // 3. 處理圖片
+      for (const image of images.filter(img => !img.id)) {
+        const { error: imageError } = await supabase
+          .from('images')
+          .insert({
+            url: image.url,
+            path: image.path,
+            news_id: newsData.id
+          });
+
+        if (imageError) throw imageError;
+      }
+
+      // 4. 獲取完整數據返回
+      const { data: created, error: fetchError } = await supabase
+        .from('news')
+        .select(`
+          *,
+          images (*),
+          news_tags (tag_id, tags (name))
+        `)
+        .eq('id', newsData.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // 轉換數據格式以符合現有前端需求
+      const formattedNews = {
+        ...created,
+        homeTitle: created.home_title,
+        contentMD: created.content_md,
+        contentHTML: created.content_html,
+        coverImage: created.cover_image,
+        createdAt: created.created_at,
+        updatedAt: created.updated_at,
+        tags: created.news_tags.map(nt => ({ name: nt.tags.name })),
+      };
+
+      return NextResponse.json(formattedNews, { status: 201 });
+    }
+  } catch (error) {
+    console.error('建立新聞失敗:', error);
+    return NextResponse.json(
+      { error: '建立新聞失敗', details: error.message },
+      { status: 500 }
+    );
+  }
 }
