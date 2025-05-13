@@ -2,7 +2,8 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
 
-export default async function NewsPage({ params: { id } }) {
+export default async function NewsPage({ params }) {
+    const { id } = params;
     // 在伺服器端抓取該篇新聞資料，避免快取
     const res = await fetch(`/api/news/${id}`, { cache: "no-store" });
     if (!res.ok) {
