@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200px" height="200px" viewBox="0 0 200 200" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>圖片佔位符</title>
+    <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#E5E5E5" x="0" y="0" width="200" height="200"></rect>
+        <text font-family="PingFang TC, sans-serif" font-size="16" font-weight="500" fill="#888888" text-anchor="middle" x="100" y="110">
+            圖片未能載入
+        </text>
+        <path d="M100,65 C111.046,65 120,73.954 120,85 C120,96.046 111.046,105 100,105 C88.954,105 80,96.046 80,85 C80,73.954 88.954,65 100,65 Z" fill="#AAAAAA"></path>
+        <path d="M60,130 L140,130 L140,140 L60,140 L60,130 Z" fill="#AAAAAA"></path>
+    </g>
+</svg>

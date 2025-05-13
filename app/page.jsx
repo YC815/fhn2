@@ -27,16 +27,17 @@ export default function HomePage() {
     const fetchNews = async () => {
       try {
         setIsLoading(true);
-        const tagQuery = selectedTags.length > 0 ? `?tags=${selectedTags.join(',')}` : '';
+        const tagQuery =
+          selectedTags.length > 0 ? `?tags=${selectedTags.join(",")}` : "";
         const response = await fetch(`/api/news${tagQuery}`);
         if (!response.ok) {
-          throw new Error('獲取新聞數據失敗');
+          throw new Error("獲取新聞數據失敗");
         }
         const data = await response.json();
         setNewsList(data);
       } catch (err) {
-        console.error('Error fetching news:', err);
-        setError('無法載入新聞，請稍後再試');
+        console.error("Error fetching news:", err);
+        setError("無法載入新聞，請稍後再試");
       } finally {
         setIsLoading(false);
       }
@@ -65,7 +66,10 @@ export default function HomePage() {
         <div className="sticky top-0 z-20 bg-white dark:bg-zinc-900 -mx-6 px-6 pt-4 pb-2 border-b border-zinc-200 dark:border-zinc-800">
           <div className="max-w-4xl mx-auto">
             <div className="flex flex-col items-center">
-              <TagSelector onChange={handleTagChange} className="w-full max-w-2xl" />
+              <TagSelector
+                onChange={handleTagChange}
+                className="w-full max-w-2xl"
+              />
             </div>
           </div>
         </div>
@@ -82,48 +86,54 @@ export default function HomePage() {
         {/* 卡片區 - 使用 relative 確保在正確的圖層 */}
         <div className="relative z-10 mt-8">
           <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {isLoading ? (
-            <div className="col-span-full text-center py-10">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-              <p className="mt-2 text-zinc-500">載入中...</p>
-            </div>
-          ) : error ? (
-            <div className="col-span-full text-center py-10">
-              <p className="text-red-500">{error}</p>
-            </div>
-          ) : newsList.length > 0 ? (
-            newsList.map((news) => (
-              <Link
-                key={news.id}
-                href={`/news/${news.id}`}
-                className="relative block aspect-square rounded-xl overflow-hidden shadow-md border-2 hover:shadow-lg transition-shadow"
-              >
-                {news.coverImage ? (
-                  <Image
-                    src={news.coverImage}
-                    alt={news.homeTitle}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-                    <span className="text-zinc-400">無封面圖片</span>
+            亞ㄍ
+            {isLoading ? (
+              <div className="col-span-full text-center py-10">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+                <p className="mt-2 text-zinc-500">載入中...</p>
+              </div>
+            ) : error ? (
+              <div className="col-span-full text-center py-10">
+                <p className="text-red-500">{error}</p>
+              </div>
+            ) : newsList.length > 0 ? (
+              newsList.map((news) => (
+                <Link
+                  key={news.id}
+                  href={`/news/${news.id}`}
+                  className="relative block aspect-square rounded-xl overflow-hidden shadow-md border-2 hover:shadow-lg transition-shadow"
+                >
+                  {news.coverImage ? (
+                    <Image
+                      src={news.coverImage}
+                      alt={news.homeTitle}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                      <span className="text-zinc-400">無封面圖片</span>
+                    </div>
+                  )}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent text-white p-4 space-y-2">
+                    <div className="flex gap-2 flex-wrap text-xs">
+                      {news.tags.slice(0, 3).map((tag) => (
+                        <span
+                          key={tag.name}
+                          className="bg-white/20 px-2 py-0.5 rounded"
+                        >
+                          #{tag.name}
+                        </span>
+                      ))}
+                    </div>
+                    <h3 className="text-xl font-bold line-clamp-2">
+                      {news.homeTitle}
+                    </h3>
                   </div>
-                )}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent text-white p-4 space-y-2">
-                  <div className="flex gap-2 flex-wrap text-xs">
-                    {news.tags.slice(0, 3).map((tag) => (
-                      <span key={tag.name} className="bg-white/20 px-2 py-0.5 rounded">
-                        #{tag.name}
-                      </span>
-                    ))}
-                  </div>
-                  <h3 className="text-xl font-bold line-clamp-2">{news.homeTitle}</h3>
-                </div>
-              </Link>
-            ))
-          ) : null}
+                </Link>
+              ))
+            ) : null}
           </section>
         </div>
       </div>

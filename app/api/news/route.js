@@ -49,7 +49,9 @@ export async function POST(request) {
         })),
       },
       images: {
-        create: images.map(({ url, path, newsId }) => ({ url, path, newsId })),
+        create: images
+          .filter((img) => !img.id)
+          .map(({ url, path, newsId }) => ({ url, path, newsId })),
       },
     },
     include: { images: true, tags: true },

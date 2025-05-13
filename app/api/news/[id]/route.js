@@ -61,10 +61,12 @@ export async function PUT(request, { params }) {
           // 重置 tags 再 connectOrCreate
           tags: {
             set: [],
-            connectOrCreate: tagNames.map((name) => ({
-              where: { name },
-              create: { name },
-            })),
+            connectOrCreate: tagNames
+              .filter((name) => typeof name === 'string') // 過濾掉非字符串的元素
+              .map((name) => ({
+                where: { name },
+                create: { name },
+              })),
           },
           // 刪除舊圖 + 新增新圖
           images: {
