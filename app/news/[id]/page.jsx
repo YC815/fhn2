@@ -5,7 +5,12 @@ import { notFound } from "next/navigation";
 export default async function NewsPage({ params }) {
     const { id } = params;
     // 在伺服器端抓取該篇新聞資料，避免快取
-    const res = await fetch(`/api/news/${id}`, { cache: "no-store" });
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : process.env.NODE_ENV === 'production'
+        ? 'https://fhn.vercel.app'
+        : 'http://localhost:3001';
+    const res = await fetch(`${baseUrl}/api/news/${id}`, { cache: "no-store" });
     if (!res.ok) {
         // 請求失敗時顯示 404
         return notFound();
