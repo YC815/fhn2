@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { TagSelector } from "@/components/TagSelector";
+import { fetchWithRetry } from "@/utils/fetchWithRetry";
 
 // 定義新聞數據結構
 // 注意：這裡使用 JSDoc 註解來提供類型提示
@@ -27,13 +28,10 @@ export default function HomePage() {
     const fetchNews = async () => {
       try {
         setIsLoading(true);
+        setError(null);
         const tagQuery =
           selectedTags.length > 0 ? `?tags=${selectedTags.join(",")}` : "";
-        const response = await fetch(`/api/news${tagQuery}`);
-        if (!response.ok) {
-          throw new Error("獲取新聞數據失敗");
-        }
-        const data = await response.json();
+        const data = await fetchWithRetry(`/api/news${tagQuery}`);
         setNewsList(data);
       } catch (err) {
         console.error("Error fetching news:", err);
@@ -87,10 +85,10 @@ export default function HomePage() {
         <div className="relative z-10 mt-8">
           <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {isLoading ? (
-              <div className="col-span-full text-center py-10">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-                <p className="mt-2 text-zinc-500">載入中...</p>
-              </div>
+              // 骨架屏
+              Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-32 bg-gray-200 dark:bg-zinc-800 rounded-lg animate-pulse col-span-1" />
+              ))
             ) : error ? (
               <div className="col-span-full text-center py-10">
                 <p className="text-red-500">{error}</p>
