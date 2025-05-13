@@ -4,13 +4,14 @@ import { headers } from "next/headers";
 import NewsContent from "./NewsContent";
 
 export default async function NewsPage({ params }) {
-  const { id } = params;
-  // 在伺服器端抓取該篇新聞資料，避免快取
-  const res = await fetch(`/api/news/${id}`, { cache: "no-store" });
-  if (!res.ok) {
-    // 請求失敗時顯示 404
-    return notFound();
-  }
+  const { id } = await Promise.resolve(params);
+  // await headers() 新寫法
+  const headersList = await headers();
+  const host = headersList.get("host");
+  const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+  const url = `${protocol}://${host}/api/news/${id}`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) return notFound();
   const news = await res.json();
 
   return (

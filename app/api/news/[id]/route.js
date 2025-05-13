@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 export async function GET(request, { params }) {
   try {
     const { id } = await Promise.resolve(params);
+    console.log(`[API] Fetching news with id: ${id}`);
+    
     const record = await prisma.news.findUnique({
       where: { id },
       include: { 
@@ -14,9 +16,25 @@ export async function GET(request, { params }) {
         references: true // 包含參考資料
       },
     });
+    
     if (!record) {
+      console.log(`[API] News with id ${id} not found`);
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
+    
+    // 調試信息：檢查返回的數據結構
+    console.log(`[API] News record found:`, {
+      id: record.id,
+      homeTitle: record.homeTitle,
+      title: record.title,
+      contentKeys: Object.keys(record),
+      hasContent: !!record.content,
+      hasContentMD: !!record.contentMD,
+      hasContentHTML: !!record.contentHTML,
+      imagesCount: record.images?.length || 0,
+      tagsCount: record.tags?.length || 0
+    });
+    
     return NextResponse.json(record);
   } catch (error) {
     console.error('Error fetching news:', error);
