@@ -9,7 +9,8 @@ import Link from 'next/link';
 const ADMIN_EMAILS = [
   'yushun@fhn.com',
   'admin@example.com',
-  'yushun@chen.zone'
+  'yushun@chen.zone',
+  'heyiamzhengxun@gmail.com'
 ];
 
 export default function AdminDashboard() {
@@ -25,7 +26,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     const checkAuth = async () => {
       if (!isLoaded) return;
-      
+
       // 如果未登入，重定向到登入頁面
       if (!isSignedIn) {
         router.push('/admin/login');
@@ -36,21 +37,21 @@ export default function AdminDashboard() {
         // 檢查用戶電子郵件是否在白名單中
         const email = user.primaryEmailAddress?.emailAddress;
         console.log('Current user email:', email);
-        
+
         if (!email) {
           throw new Error('無法獲取用戶電子郵件');
         }
 
         const isAdmin = ADMIN_EMAILS.includes(email);
         console.log('Is admin:', isAdmin);
-        
+
         if (!isAdmin) {
           // 如果不是管理員，重定向到首頁
           console.log('權限不足，重定向到首頁');
           router.push('/');
           return;
         }
-        
+
         // 如果是管理員，設置已授權標記
         setIsAuthorized(true);
       } catch (error) {
@@ -102,12 +103,12 @@ export default function AdminDashboard() {
             <UserButton afterSignOutUrl="/admin/login" />
           </div>
         </div>
-        
+
         {/* 新增新聞表單 */}
         <div className="bg-white shadow rounded-lg p-6 mb-8">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">新增新聞</h2>
           <div className="flex justify-center">
-            <Link 
+            <Link
               href="/admin/create"
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
@@ -119,22 +120,22 @@ export default function AdminDashboard() {
         {/* 編輯現有新聞 */}
         <div className="bg-white shadow rounded-lg p-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">編輯以前的新聞</h2>
-          
+
           {newsList.length === 0 ? (
             <p className="text-gray-500 text-center py-4">目前沒有新聞</p>
           ) : (
             <div className="space-y-4">
               {newsList.map((newsItem) => (
-                <Link 
-                  key={newsItem.id} 
+                <Link
+                  key={newsItem.id}
                   href={`/admin/edit/${newsItem.id}`}
                   className="block p-4 border rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-start space-x-4">
                     {newsItem.coverImage && (
                       <div className="flex-shrink-0">
-                        <img 
-                          src={newsItem.coverImage} 
+                        <img
+                          src={newsItem.coverImage}
                           alt={newsItem.title}
                           className="h-20 w-20 object-cover rounded"
                         />
