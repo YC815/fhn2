@@ -108,7 +108,7 @@ export default function NewsEditor({ initialData }) {
 
   const [homeTitle, setHomeTitle] = useState(initialData?.homeTitle || "");
   const [title, setTitle] = useState(initialData?.title || "");
-  const [selectedTags, setSelectedTags] = useState(initialData?.tags || []);
+  const [selectedTags, setSelectedTags] = useState(initialData?.tags ? initialData.tags.map(tag => tag.name) : []);
   const [content, setContent] = useState(initialData?.contentMD || "");
   const [allTags, setAllTags] = useState([]);
   const [newTagName, setNewTagName] = useState("");
@@ -118,10 +118,10 @@ export default function NewsEditor({ initialData }) {
   const [coverImage, setCoverImage] = useState(
     initialData?.coverImage
       ? {
-          id: initialData.coverImage.id,
-          url: initialData.coverImage.url,
-          path: initialData.coverImage.path,
-        }
+        id: initialData.coverImage.id,
+        url: initialData.coverImage.url,
+        path: initialData.coverImage.path,
+      }
       : null
   );
   // 初始化參考資料，確保至少有一個空參考
@@ -743,11 +743,10 @@ export default function NewsEditor({ initialData }) {
                   {images.map((img) => (
                     <div
                       key={img.id}
-                      className={`relative group cursor-pointer rounded-md overflow-hidden border-2 ${
-                        coverImage?.id === img.id
-                          ? "border-blue-500"
-                          : "border-transparent"
-                      }`}
+                      className={`relative group cursor-pointer rounded-md overflow-hidden border-2 ${coverImage?.id === img.id
+                        ? "border-blue-500"
+                        : "border-transparent"
+                        }`}
                       onClick={() => selectCoverImageFromGallery(img)}
                     >
                       <img
@@ -799,11 +798,10 @@ export default function NewsEditor({ initialData }) {
                       {images.map((img) => (
                         <div
                           key={img.id}
-                          className={`relative group cursor-pointer rounded-md overflow-hidden border-2 ${
-                            selectedImage?.id === img.id
-                              ? "border-blue-500"
-                              : "border-transparent"
-                          }`}
+                          className={`relative group cursor-pointer rounded-md overflow-hidden border-2 ${selectedImage?.id === img.id
+                            ? "border-blue-500"
+                            : "border-transparent"
+                            }`}
                           onClick={() => selectImageFromGallery(img)}
                         >
                           <img
@@ -862,36 +860,32 @@ export default function NewsEditor({ initialData }) {
               </TabsContent>
               <TabsContent value="upload" className="flex-1">
                 <div
-                  className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-                    isDragging
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                      : "border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                  }`}
+                  className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${isDragging
+                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                    : "border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                    }`}
                   onClick={() => uploadRef.current?.click()}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, false)}
                 >
                   <ImagePlus
-                    className={`w-12 h-12 mx-auto mb-2 ${
-                      isDragging ? "text-blue-500" : "text-gray-400"
-                    }`}
+                    className={`w-12 h-12 mx-auto mb-2 ${isDragging ? "text-blue-500" : "text-gray-400"
+                      }`}
                   />
                   <p
-                    className={`${
-                      isDragging
-                        ? "text-blue-500 dark:text-blue-400"
-                        : "text-gray-600 dark:text-gray-300"
-                    }`}
+                    className={`${isDragging
+                      ? "text-blue-500 dark:text-blue-400"
+                      : "text-gray-600 dark:text-gray-300"
+                      }`}
                   >
                     {isDragging ? "放開以上傳圖片" : "點擊或拖曳圖片到此處上傳"}
                   </p>
                   <p
-                    className={`text-sm mt-1 ${
-                      isDragging
-                        ? "text-blue-400 dark:text-blue-300"
-                        : "text-gray-400 dark:text-gray-400"
-                    }`}
+                    className={`text-sm mt-1 ${isDragging
+                      ? "text-blue-400 dark:text-blue-300"
+                      : "text-gray-400 dark:text-gray-400"
+                      }`}
                   >
                     支援 JPG, PNG 格式
                   </p>
@@ -993,20 +987,18 @@ export default function NewsEditor({ initialData }) {
             {images.slice(0, images.length >= 5 ? 3 : 4).map((img) => (
               <div
                 key={img.id}
-                className={`relative aspect-square rounded-md overflow-hidden border-2 group ${
-                  coverImage?.id === img.id
-                    ? "border-blue-500 dark:border-blue-400"
-                    : "border-transparent"
-                }`}
+                className={`relative aspect-square rounded-md overflow-hidden border-2 group ${coverImage?.id === img.id
+                  ? "border-blue-500 dark:border-blue-400"
+                  : "border-transparent"
+                  }`}
                 onClick={() => setCoverImage(img)}
               >
                 <div className="relative w-full h-full">
                   <img
                     src={img.url}
                     alt="Gallery thumbnail"
-                    className={`w-full h-full object-cover transition-all duration-300 ${
-                      coverImage?.id !== img.id ? "group-hover:blur-sm" : ""
-                    }`}
+                    className={`w-full h-full object-cover transition-all duration-300 ${coverImage?.id !== img.id ? "group-hover:blur-sm" : ""
+                      }`}
                   />
                   <div
                     className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 cursor-pointer"
@@ -1038,11 +1030,10 @@ export default function NewsEditor({ initialData }) {
                         </span>
                       ) : null}
                       <div
-                        className={`absolute transition-all duration-300 ${
-                          copiedStates[img.id]
-                            ? "opacity-0 scale-75"
-                            : "opacity-100"
-                        }`}
+                        className={`absolute transition-all duration-300 ${copiedStates[img.id]
+                          ? "opacity-0 scale-75"
+                          : "opacity-100"
+                          }`}
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -1067,11 +1058,10 @@ export default function NewsEditor({ initialData }) {
                         </svg>
                       </div>
                       <div
-                        className={`absolute transition-all duration-300 ${
-                          copiedStates[img.id]
-                            ? "opacity-100 scale-100"
-                            : "opacity-0 scale-75"
-                        }`}
+                        className={`absolute transition-all duration-300 ${copiedStates[img.id]
+                          ? "opacity-100 scale-100"
+                          : "opacity-0 scale-75"
+                          }`}
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -1105,11 +1095,10 @@ export default function NewsEditor({ initialData }) {
             ))}
             {(images.length >= 5 || images.length === 0) && (
               <div
-                className={`aspect-square flex items-center justify-center ${
-                  images.length === 0
-                    ? "bg-transparent"
-                    : "bg-gray-100 dark:bg-gray-700"
-                } rounded-md cursor-pointer border-2 border-dashed border-gray-300 dark:border-gray-600`}
+                className={`aspect-square flex items-center justify-center ${images.length === 0
+                  ? "bg-transparent"
+                  : "bg-gray-100 dark:bg-gray-700"
+                  } rounded-md cursor-pointer border-2 border-dashed border-gray-300 dark:border-gray-600`}
                 onClick={() => setShowGallery(true)}
               >
                 <div className="text-center">
@@ -1136,36 +1125,32 @@ export default function NewsEditor({ initialData }) {
           </div>
         ) : (
           <div
-            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-              isDragging
-                ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                : "border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-            }`}
+            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${isDragging
+              ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+              : "border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+              }`}
             onClick={() => setShowGallery(true)}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, true)}
           >
             <ImagePlus
-              className={`w-8 h-8 mx-auto mb-2 ${
-                isDragging ? "text-blue-500" : "text-gray-400"
-              }`}
+              className={`w-8 h-8 mx-auto mb-2 ${isDragging ? "text-blue-500" : "text-gray-400"
+                }`}
             />
             <p
-              className={`${
-                isDragging
-                  ? "text-blue-500 dark:text-blue-400"
-                  : "text-gray-600 dark:text-gray-300"
-              }`}
+              className={`${isDragging
+                ? "text-blue-500 dark:text-blue-400"
+                : "text-gray-600 dark:text-gray-300"
+                }`}
             >
               {isDragging ? "放開以上傳圖片" : "點擊上傳圖片"}
             </p>
             <p
-              className={`text-sm mt-1 ${
-                isDragging
-                  ? "text-blue-400 dark:text-blue-300"
-                  : "text-gray-400 dark:text-gray-400"
-              }`}
+              className={`text-sm mt-1 ${isDragging
+                ? "text-blue-400 dark:text-blue-300"
+                : "text-gray-400 dark:text-gray-400"
+                }`}
             >
               支援 JPG, PNG 格式
             </p>
