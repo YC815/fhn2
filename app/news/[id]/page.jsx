@@ -2,6 +2,7 @@
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import NewsContent from "./NewsContent";
+import Image from "next/image"; // 添加這一行
 
 export default async function NewsPage({ params }) {
   const { id } = await Promise.resolve(params);
