@@ -139,19 +139,31 @@ export default function NewsEditor({ initialData }) {
     fetch("/api/tags")
       .then((res) => res.json())
       .then((tags) => {
-        setAllTags(tags);
-        // 不需要過濾已選擇的標籤，保留所有標籤供選擇
+        // 確保 tags 一定是陣列
+        const tagsArray = Array.isArray(tags) ? tags : [];
+        setAllTags(tagsArray);
+      })
+      .catch((error) => {
+        console.error("獲取標籤失敗:", error);
+        setAllTags([]); // 出錯時設為空陣列
       });
 
     const loadImages = async () => {
       // declare the inner helper
       async function fetchTags() {
-        const res = await fetch("/api/images");
-        const data = await res.json();
-        const sorted = [...data].sort(
-          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-        );
-        setImages(sorted);
+        try {
+          const res = await fetch("/api/images");
+          const data = await res.json();
+          // 確保 data 是陣列
+          const dataArray = Array.isArray(data) ? data : [];
+          const sorted = [...dataArray].sort(
+            (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+          );
+          setImages(sorted);
+        } catch (error) {
+          console.error("載入圖片失敗:", error);
+          setImages([]);
+        }
       }
 
       // actually call it
@@ -378,42 +390,44 @@ export default function NewsEditor({ initialData }) {
       e.preventDefault();
       e.stopPropagation();
     }
-    
+
     console.log("[刪除圖片] 點擊垃圾桶，圖片 id:", id);
-    
+
     // 直接接著處理圖片刪除，不使用 confirm 對話框
 
     try {
       console.log("[刪除圖片] 發送 DELETE 請求到 /api/images/" + id);
       const apiUrl = `/api/images/${id}`;
       console.log("[刪除圖片] 完整請求URL:", apiUrl);
-      
+
       // 直接在本地先移除圖片，改善使用者體驗
       const oldImages = [...images];
-      setImages(prevImages => prevImages.filter(img => img.id !== id));
-      
+      setImages((prevImages) => prevImages.filter((img) => img.id !== id));
+
       try {
-        const response = await fetch(apiUrl, { 
+        const response = await fetch(apiUrl, {
           method: "DELETE",
           headers: {
-            "Content-Type": "application/json"
-          }
+            "Content-Type": "application/json",
+          },
         });
-        
+
         console.log("[刪除圖片] DELETE 請求回應 status:", response.status);
-        
+
         if (!response.ok) {
           const errorText = await response.text();
           console.error("[刪除圖片] 回應不成功:", errorText);
-          throw new Error(`刪除失敗: ${response.status} ${errorText.substring(0, 100)}`);
+          throw new Error(
+            `刪除失敗: ${response.status} ${errorText.substring(0, 100)}`
+          );
         }
-        
+
         // 如果刪除的是當前封面圖片，清除封面狀態
         if (coverImage?.id === id) {
           setCoverImage(null);
           console.log("[刪除圖片] 被刪除的是封面，已清除 coverImage 狀態");
         }
-        
+
         console.log("[刪除圖片] 刪除成功");
       } catch (fetchError) {
         console.error("[刪除圖片] 網路請求失敗:", fetchError);
@@ -713,7 +727,9 @@ export default function NewsEditor({ initialData }) {
       <Dialog open={showCoverGallery} onOpenChange={setShowCoverGallery}>
         <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           <DialogHeader>
-            <DialogTitle className="dark:text-white">選擇主頁顯示用圖</DialogTitle>
+            <DialogTitle className="dark:text-white">
+              選擇主頁顯示用圖
+            </DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-hidden">
             <ScrollArea className="h-[60vh] w-full">
@@ -727,7 +743,11 @@ export default function NewsEditor({ initialData }) {
                   {images.map((img) => (
                     <div
                       key={img.id}
-                      className={`relative group cursor-pointer rounded-md overflow-hidden border-2 ${coverImage?.id === img.id ? "border-blue-500" : "border-transparent"}`}
+                      className={`relative group cursor-pointer rounded-md overflow-hidden border-2 ${
+                        coverImage?.id === img.id
+                          ? "border-blue-500"
+                          : "border-transparent"
+                      }`}
                       onClick={() => selectCoverImageFromGallery(img)}
                     >
                       <img
@@ -791,7 +811,7 @@ export default function NewsEditor({ initialData }) {
                             alt="Gallery"
                             className="w-full h-32 object-cover"
                           />
-                          <div 
+                          <div
                             className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 cursor-pointer"
                             onClick={async (e) => {
                               e.stopPropagation();
@@ -799,9 +819,15 @@ export default function NewsEditor({ initialData }) {
                               try {
                                 await navigator.clipboard.writeText(markdown);
                                 console.log("已複製 Markdown 圖片格式到剪貼簿");
-                                setCopiedStates((prev) => ({ ...prev, [img.id]: true }));
+                                setCopiedStates((prev) => ({
+                                  ...prev,
+                                  [img.id]: true,
+                                }));
                                 setTimeout(() => {
-                                  setCopiedStates((prev) => ({ ...prev, [img.id]: false }));
+                                  setCopiedStates((prev) => ({
+                                    ...prev,
+                                    [img.id]: false,
+                                  }));
                                 }, 2000);
                               } catch (err) {
                                 console.error("複製失敗:", err);
@@ -990,9 +1016,15 @@ export default function NewsEditor({ initialData }) {
                       try {
                         await navigator.clipboard.writeText(markdown);
                         console.log("已複製 Markdown 圖片格式到剪貼簿");
-                        setCopiedStates((prev) => ({ ...prev, [img.id]: true }));
+                        setCopiedStates((prev) => ({
+                          ...prev,
+                          [img.id]: true,
+                        }));
                         setTimeout(() => {
-                          setCopiedStates((prev) => ({ ...prev, [img.id]: false }));
+                          setCopiedStates((prev) => ({
+                            ...prev,
+                            [img.id]: false,
+                          }));
                         }, 2000);
                       } catch (err) {
                         console.error("複製失敗:", err);
