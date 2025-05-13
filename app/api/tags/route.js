@@ -26,18 +26,15 @@ export async function GET() {
     // 確保始終返回陰細組
     return NextResponse.json(all || []);
   } catch (error) {
-    console.error('獲取標籤時出錯:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
-    
+    // 印出完整 error 物件
+    console.error('🚨 /api/tags error:', error);
     return NextResponse.json(
       {
         error: '獲取標籤失敗',
         details: error.message,
-        // 僅在非生產環境顯示詳細堆疊
-        stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
+        name: error.name,
+        stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+        raw: process.env.NODE_ENV !== 'production' ? error : undefined
       },
       { status: 500 }
     );
