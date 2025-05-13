@@ -140,10 +140,7 @@ export default function NewsEditor({ initialData }) {
       .then((res) => res.json())
       .then((tags) => {
         setAllTags(tags);
-        // Filter out already selected tags from the dropdown
-        setAllTags((prev) =>
-          prev.filter((tag) => !selectedTags.includes(tag.name))
-        );
+        // 不需要過濾已選擇的標籤，保留所有標籤供選擇
       });
 
     const loadImages = async () => {

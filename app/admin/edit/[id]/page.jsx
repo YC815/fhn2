@@ -41,8 +41,8 @@ export default function EditNewsPage() {
                         url: data.coverImage.url || data.coverImage,
                         path: data.coverImage.path || ''
                     } : null,
-                    // 確保 tags 是數組格式
-                    tags: Array.isArray(data.tags) ? data.tags : [],
+                    // 從標籤對象中提取名稱，轉換為字符串陣列
+                    tags: Array.isArray(data.tags) ? data.tags.map(tag => tag.name) : [],
                     // 設置參考資料
                     references: formattedReferences.length > 0 ? formattedReferences : ['']
                 };
