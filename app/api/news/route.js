@@ -1,83 +1,39 @@
 // app/api/news/route.js
 import { NextResponse } from "next/server";
-import supabase from "@/utils/supabase";
 import { prisma } from "@/lib/prisma";
 
 // GET /api/news?tags=AI,新聞
 export async function GET(request) {
   try {
     console.log('正在執行 GET /api/news API');
-    console.log('Supabase 環境變數存在:', Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL));
     console.log('Prisma 環境變數存在:', Boolean(process.env.DATABASE_URL));
     
     const { searchParams } = new URL(request.url);
     const tagsParam = searchParams.get("tags");
     console.log('標籤過濾參數:', tagsParam || '無');
     
-    // 先嘗試使用 Prisma
-    try {
-      const filter = tagsParam
-        ? {
-            tags: { some: { name: { in: tagsParam.split(",") } } },
-          }
-        : {};
+    // 使用 Prisma 獲取新聞列表
+    const filter = tagsParam
+      ? {
+          tags: { some: { name: { in: tagsParam.split(",") } } },
+        }
+      : {};
 
-      // 測試資料庫連接
-      await prisma.$queryRaw`SELECT 1`;
-      console.log('資料庫連接測試成功');
+    // 測試資料庫連接
+    await prisma.$queryRaw`SELECT 1`;
+    console.log('資料庫連接測試成功');
+    
+    const list = await prisma.news.findMany({
+      where: filter,
+      include: { images: true, tags: true },
+      orderBy: { createdAt: "desc" },
+    });
       
-      const list = await prisma.news.findMany({
-        where: filter,
-        include: { images: true, tags: true },
-        orderBy: { createdAt: "desc" },
-      });
-      
-      console.log(`成功使用 Prisma 獲取 ${list.length} 條新聞記錄`);
-      return NextResponse.json(list);
-    } catch (prismaError) {  
-      console.log('使用 Prisma 失敗，嘗試 Supabase:', prismaError.message);
-
-      // 如果 Prisma 失敗，嘗試使用 Supabase
-      // 取得所有新聞
-      let query = supabase.from('news').select(`
-        *,
-        images (*),
-        news_tags (tag_id, tags (name))
-      `).order('created_at', { ascending: false });
-      
-      // 如果有標籤過濾
-      if (tagsParam) {
-        const tagNames = tagsParam.split(",");
-        // 這裡假設您的 Supabase 數據結構中有 news_tags 中間表和 tags 表
-        query = query.in('news_tags.tags.name', tagNames);
-      }
-
-      // 執行查詢
-      const { data: list, error: queryError } = await query;
-      
-      if (queryError) {
-        console.error('Supabase 查詢錯誤:', queryError);
-        throw new Error(`Supabase 查詢錯誤: ${queryError.message}`);  
-      }
-      
-      // 轉換資料格式以符合現有前端需求
-      const formattedList = list.map(news => ({
-        ...news,
-        homeTitle: news.home_title || news.title,
-        contentMD: news.content_md,
-        contentHTML: news.content_html,
-        coverImage: news.cover_image,
-        createdAt: news.created_at,
-        updatedAt: news.updated_at,
-        tags: news.news_tags?.map(nt => ({ name: nt.tags.name })) || [],
-      }));
-      
-      console.log(`成功使用 Supabase 獲取 ${formattedList.length} 條新聞記錄`);
-      return NextResponse.json(formattedList);
-    }
+    console.log(`成功使用 Prisma 獲取 ${list.length} 條新聞記錄`);
+    return NextResponse.json(list);
   } catch (error) {
     // 印出完整 error 物件
-    console.error('🚨 /api/news error:', error);
+    console.error('🔴 /api/news error:', error);
     return NextResponse.json(
       {
         error: '獲取新聞數據失敗',
