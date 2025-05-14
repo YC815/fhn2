@@ -475,7 +475,14 @@ export default function NewsEditor({ initialData }) {
           })),
       };
 
-      console.log("Saving with payload:", payload);
+      console.log("正在儲存文章，詳細資訊:", {
+        method: newsId ? "PUT" : "POST",
+        url: newsId ? `/api/news/${newsId}` : "/api/news",
+        contentLength: content.length,
+        tagsCount: selectedTags.length,
+        imagesCount: images.length,
+        referencesCount: references.filter(ref => ref.url && ref.url.trim() !== "").length
+      });
 
       // 使用 PUT 進行更新，POST 進行創建
       const method = newsId ? "PUT" : "POST";
@@ -487,21 +494,58 @@ export default function NewsEditor({ initialData }) {
         body: JSON.stringify(payload),
       });
 
-      const responseData = await response.json().catch(() => ({}));
+      try {
+        const responseData = await response.json();
 
-      if (!response.ok) {
-        console.error("Save failed:", responseData);
-        throw new Error(
-          responseData.error || responseData.message || "儲存失敗"
-        );
+        if (!response.ok) {
+          console.error("儲存失敗，回應狀態:", response.status, response.statusText);
+          console.error("回應詳細資訊:", responseData);
+          throw new Error(
+            responseData.error || responseData.message || responseData.details || `HTTP錯誤: ${response.status}`
+          );
+        }
+
+        console.log("儲存成功，回應數據:", responseData);
+
+        // 顯示成功消息並導航
+        alert(newsId ? "文章更新成功！" : "文章創建成功！");
+        router.push("/admin");
+        router.refresh(); // 確保頁面數據是最新的
+      } catch (jsonError) {
+        console.error("解析回應 JSON 時出錯:", jsonError);
+
+        // 處理非 JSON 回應的情況
+        try {
+          const textResponse = await response.text();
+          console.error("收到非 JSON 回應:", textResponse ? textResponse.substring(0, 200) : "(無回應內容)");
+
+          // 嘗試從錯誤訊息中提取有用信息
+          let errorMessage = `無法解析 API 回應: ${jsonError.message}`;
+
+          if (textResponse) {
+            // 嘗試從 HTML 錯誤頁面中提取錯誤信息
+            const errorMatch = textResponse.match(/<pre>Error: (.+?)<\/pre>/);
+            if (errorMatch && errorMatch[1]) {
+              errorMessage = errorMatch[1];
+            }
+            // 如果仍然無法提取有用信息，但看起來像是 Prisma 錯誤
+            else if (textResponse.includes("PrismaClientKnownRequestError")) {
+              errorMessage = "數據庫操作錯誤，請聯繫管理員";
+            }
+            // 如果看起來像是連線錯誤
+            else if (textResponse.includes("connect")) {
+              errorMessage = "數據庫連線問題，請聯繫管理員";
+            }
+          }
+
+          throw new Error(errorMessage);
+        } catch (textError) {
+          // 如果連文本都無法獲取，使用通用錯誤訊息
+          throw new Error(`API 請求失敗 (${response.status}): ${jsonError.message}`);
+        }
       }
-
-      // 顯示成功消息並導航
-      alert(newsId ? "文章更新成功！" : "文章創建成功！");
-      router.push("/admin");
-      router.refresh(); // 確保頁面數據是最新的
     } catch (error) {
-      console.error("Error saving article:", error);
+      console.error("建立新聞失敗:", error);
       alert(`儲存失敗: ${error.message || "未知錯誤"}`);
     }
   }
