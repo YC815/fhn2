@@ -31,8 +31,31 @@ export default function HomePage() {
         setError(null);
         const tagQuery =
           selectedTags.length > 0 ? `?tags=${selectedTags.join(",")}` : "";
-        const data = await fetchWithRetry(`/api/news${tagQuery}`);
+
+        // 嘗試從 sessionStorage 讀取緩存
+        const cacheKey = `news-cache${tagQuery}`;
+        const cachedData = typeof window !== 'undefined' ? sessionStorage.getItem(cacheKey) : null;
+        const cachedTime = typeof window !== 'undefined' ? sessionStorage.getItem(`${cacheKey}-time`) : null;
+        const now = new Date().getTime();
+
+        // 檢查緩存是否存在且未過期（設定為5分鐘）
+        if (cachedData && cachedTime && (now - parseInt(cachedTime)) < 5 * 60 * 1000) {
+          setNewsList(JSON.parse(cachedData));
+          setIsLoading(false);
+          return;
+        }
+
+        // 如果沒有緩存或緩存已過期，則從 API 獲取數據
+        // 添加時間戳參數防止瀏覽器快取
+        const timestamp = new Date().getTime();
+        const data = await fetchWithRetry(`/api/news${tagQuery}${tagQuery ? '&' : '?'}t=${timestamp}`);
         setNewsList(data);
+
+        // 儲存到 sessionStorage
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem(cacheKey, JSON.stringify(data));
+          sessionStorage.setItem(`${cacheKey}-time`, now.toString());
+        }
       } catch (err) {
         console.error("Error fetching news:", err);
         setError("無法載入新聞，請稍後再試");
@@ -47,6 +70,20 @@ export default function HomePage() {
   // 處理標籤變化
   const handleTagChange = (tags) => {
     setSelectedTags(tags);
+  };
+
+  // 手動刷新函數
+  const handleRefresh = () => {
+    // 清除緩存並重新載入
+    if (typeof window !== 'undefined') {
+      // 刪除所有與新聞相關的緩存
+      Object.keys(sessionStorage).forEach(key => {
+        if (key.startsWith('news-cache')) {
+          sessionStorage.removeItem(key);
+        }
+      });
+    }
+    setSelectedTags([...selectedTags]); // 創建新陣列觸發 useEffect
   };
 
   return (
@@ -64,10 +101,19 @@ export default function HomePage() {
         <div className="sticky top-0 z-20 bg-white dark:bg-zinc-900 -mx-6 px-6 pt-4 pb-2 border-b border-zinc-200 dark:border-zinc-800">
           <div className="max-w-4xl mx-auto">
             <div className="flex flex-col items-center">
-              <TagSelector
-                onChange={handleTagChange}
-                className="w-full max-w-2xl"
-              />
+              <div className="flex justify-between w-full max-w-2xl mb-2">
+                <TagSelector
+                  onChange={handleTagChange}
+                  className="flex-1"
+                />
+                <button
+                  onClick={handleRefresh}
+                  className="ml-2 px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-sm transition-colors"
+                  title="刷新內容"
+                >
+                  重新載入
+                </button>
+              </div>
             </div>
           </div>
         </div>

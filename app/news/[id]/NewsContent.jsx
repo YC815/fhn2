@@ -45,6 +45,7 @@ export default function NewsContent({ news }) {
       hasContentHTML: !!news?.contentHTML,
       images: news?.images?.length || 0,
       tags: news?.tags?.length || 0,
+      titleDisplay: "使用 homeTitle 以與主頁保持一致"
     });
   }, [news]);
 
@@ -203,11 +204,11 @@ export default function NewsContent({ news }) {
       `}</style>
       <article className="relative max-w-3xl mx-auto px-4 lg:px-0">
         {/* 返回主頁按鈕 */}
-        <div className="absolute left-0 top-0 ">
+        <div className="fixed left-4 top-4 z-40 mt-20">
           <a href="/" className="inline-block">
             <button
               type="button"
-              className="flex items-center gap-1 px-3 py-2 rounded hover:bg-muted transition-colors border border-input bg-background text-foreground shadow-sm mt-2 ml-2"
+              className="flex items-center gap-1 px-3 py-2 rounded-md bg-white dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors border border-gray-300 dark:border-zinc-600 text-gray-900 dark:text-white shadow-lg"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -230,7 +231,7 @@ export default function NewsContent({ news }) {
 
         {/* 標題 & 副標題 */}
         <div className="mb-8 pt-20">
-          <h1 className="text-4xl font-bold mb-2">{news.title}</h1>
+          <h1 className="text-4xl font-bold mb-2">{news.homeTitle}</h1>
 
           {news.subtitle && (
             <p className="italic text-lg mb-6">{news.subtitle}</p>
@@ -295,7 +296,7 @@ export default function NewsContent({ news }) {
             >
               {content}
             </ReactMarkdown>
-            
+
             {/* 參考資料區塊 */}
             {news.references && news.references.length > 0 && (
               <div className="mt-16 border-t border-gray-200 dark:border-gray-700 pt-8">
@@ -306,9 +307,9 @@ export default function NewsContent({ news }) {
                       <div className="mt-0.5 w-6 flex-shrink-0 text-gray-700 dark:text-gray-300">{idx + 1}.</div>
                       <div className="flex-1">
                         {ref.url ? (
-                          <a 
-                            href={ref.url} 
-                            target="_blank" 
+                          <a
+                            href={ref.url}
+                            target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 dark:text-blue-400 hover:underline"
                           >

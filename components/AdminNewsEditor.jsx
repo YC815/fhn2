@@ -617,6 +617,17 @@ export default function NewsEditor({ initialData }) {
       </div>
 
       <div className="space-y-2">
+        <Label htmlFor="homeTitle">主頁顯示標題</Label>
+        <Input
+          id="homeTitle"
+          placeholder="輸入在主頁顯示的標題（留空則使用上方標題）"
+          value={homeTitle}
+          onChange={(e) => setHomeTitle(e.target.value)}
+          className="w-full"
+        />
+      </div>
+
+      <div className="space-y-2">
         <Label>主頁顯示用圖</Label>
         <div className="flex items-center gap-4">
           {coverImage ? (
