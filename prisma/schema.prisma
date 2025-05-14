@@ -29,13 +29,14 @@ model News {
   contentHTML String
   coverImage  String?
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // 圖片（一對多）
   images Image[]
 
   // 標籤（多對多，隱式關聯表由 Prisma 自動建立）
   tags Tag[]
-  
+
   // 參考資料（一對多）
   references Reference[]
 }
@@ -51,28 +52,28 @@ model Tag {
 
 /// 用戶表
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String
-  password      String
-  role          UserRole  @default(USER)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      UserRole @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 /// 用戶角色枚舉
 enum UserRole {
-  USER     // 普通用戶
-  EDITOR   // 編輯
-  ADMIN    // 管理員
+  USER // 普通用戶
+  EDITOR // 編輯
+  ADMIN // 管理員
 }
 
 /// 參考資料表
 model Reference {
-  id      String   @id @default(cuid())
-  url     String
-  title   String?
-  newsId  String
-  news    News     @relation(fields: [newsId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  url       String
+  title     String?
+  newsId    String
+  news      News     @relation(fields: [newsId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 }

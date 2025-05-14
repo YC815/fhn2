@@ -237,6 +237,26 @@ export default function NewsContent({ news }) {
             <p className="italic text-lg mb-6">{news.subtitle}</p>
           )}
 
+          {/* 發佈時間和更新時間 */}
+          <div className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
+            <div>
+              <span className="font-semibold">發佈時間：</span>
+              {new Date(news.createdAt).toLocaleString('zh-TW', {
+                year: 'numeric', month: 'long', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+              })}
+            </div>
+            {news.updatedAt && news.updatedAt !== news.createdAt && (
+              <div>
+                <span className="font-semibold">更新時間：</span>
+                {new Date(news.updatedAt).toLocaleString('zh-TW', {
+                  year: 'numeric', month: 'long', day: 'numeric',
+                  hour: '2-digit', minute: '2-digit'
+                })}
+              </div>
+            )}
+          </div>
+
           {/* 標籤 */}
           <div className="flex flex-wrap gap-2 mt-4">
             {news.tags.map((tag) => (
