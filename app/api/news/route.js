@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { supabase } from "@/lib/supabase";
-
+// :)
 // GET /api/news?tags=AI,新聞
 export async function GET(request) {
   try {
