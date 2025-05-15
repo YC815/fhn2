@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
-import { Search, Sun, Moon } from "lucide-react";
+import { Search, Sun, Moon, Facebook, Instagram, AtSign } from "lucide-react";
 import ThemeSwitch from "@/components/ThemeSwitch";
 import { usePathname } from "next/navigation";
 
@@ -29,7 +29,7 @@ export function NavBar({ searchTerm = "", onSearchChange = () => { } }) {
                 <span className="text-lg font-bold whitespace-nowrap sm:hidden">遠望</span>
             </Link>
 
-            {/* 右側：搜尋 + 主題切換 */}
+            {/* 右側：搜尋 + 社群媒體圖標 + 主題切換 */}
             <div className="flex items-center space-x-4">
                 {/* 搜尋框 - 只在首頁顯示 */}
                 {isHomePage && (
@@ -43,6 +43,34 @@ export function NavBar({ searchTerm = "", onSearchChange = () => { } }) {
                         />
                     </div>
                 )}
+
+                {/* 社群媒體圖標 */}
+                <div className="flex items-center space-x-3">
+                    <a
+                        href="https://www.threads.com/@farhorizonnews?igshid=NTc4MTIwNjQ2YQ=="
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                    >
+                        <AtSign className="w-5 h-5" />
+                    </a>
+                    <a
+                        href="https://www.instagram.com/farhorizonnews?igsh=eng1ZThsazJlZmRo"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                    >
+                        <Instagram className="w-5 h-5" />
+                    </a>
+                    <a
+                        href="https://www.facebook.com/share/1BjfcvnKgg/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                    >
+                        <Facebook className="w-5 h-5" />
+                    </a>
+                </div>
 
                 {/* 主題切換 */}
                 <ThemeSwitch />
