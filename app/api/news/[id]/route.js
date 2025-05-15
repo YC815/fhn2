@@ -210,89 +210,109 @@ export async function PUT(request, { params }) {
       );
     }
 
-    // 開始事務
-    const updated = await prisma.$transaction(async (tx) => {
-      // 先更新新聞基本資料
-      const updatedNews = await tx.news.update({
-        where: { id },
-        data: {
-          homeTitle,
-          title,
-          subtitle,
-          contentMD,
-          contentHTML,
-          coverImage,
-          // 重置 tags 再 connectOrCreate
-          tags: {
-            set: [],
-            connectOrCreate: safeTagNames
-              .filter((name) => typeof name === "string" && name.trim() !== "") // 過濾掉非字符串的元素
-              .map((name) => ({
-                where: { name },
-                create: { name },
-              })),
-          },
-          // 刪除舊圖 + 新增新圖
-          images: {
-            deleteMany: { id: { in: safeImageIdsToDelete.filter((id) => id) } },
-            create: safeImagesToCreate
-              .filter((img) => img && img.url && img.path) // 確保url和path存在
-              .map((img) => ({
-                url: img.url,
-                path: img.path,
-              })),
-          },
+    // 步驟 1: 更新新聞基本資料
+    console.log(`[API] 步驟 1: 更新新聞基本資料 (ID: ${id})`);
+    const updatedNews = await prisma.news.update({
+      where: { id },
+      data: {
+        homeTitle,
+        title,
+        subtitle,
+        contentMD,
+        contentHTML,
+        coverImage,
+      },
+    });
+
+    // 步驟 2: 更新標籤
+    console.log(`[API] 步驟 2: 處理標籤關聯 (${safeTagNames.length} 個標籤)`);
+    await prisma.news.update({
+      where: { id },
+      data: {
+        tags: {
+          set: [],
+          connectOrCreate: safeTagNames
+            .filter((name) => typeof name === "string" && name.trim() !== "")
+            .map((name) => ({
+              where: { name },
+              create: { name },
+            })),
         },
-        include: {
-          images: true,
-          tags: true,
-          references: true,
+      },
+    });
+
+    // 步驟 3: 處理刪除圖片
+    if (safeImageIdsToDelete.length > 0) {
+      console.log(
+        `[API] 步驟 3: 刪除舊圖片 (${safeImageIdsToDelete.length} 張)`
+      );
+      await prisma.image.deleteMany({
+        where: {
+          id: { in: safeImageIdsToDelete.filter((id) => id) },
+          newsId: id,
         },
       });
+    }
 
-      // 處理參考資料：先刪除所有現有的，再新增
-      await tx.reference.deleteMany({
-        where: { newsId: id },
-      });
+    // 步驟 4: 添加新圖片
+    if (safeImagesToCreate.length > 0) {
+      console.log(`[API] 步驟 4: 新增圖片 (${safeImagesToCreate.length} 張)`);
+      const validImages = safeImagesToCreate.filter(
+        (img) => img && img.url && img.path
+      );
 
-      if (safeReferences.length > 0) {
-        // 過濾有效的參考資料
-        const validReferences = safeReferences.filter(
-          (ref) =>
-            ref &&
-            typeof ref === "object" &&
-            ref.url &&
-            typeof ref.url === "string"
-        );
-
-        console.log(`找到 ${validReferences.length} 個有效參考資料，準備新增`);
-
-        await Promise.all(
-          validReferences.map((ref) =>
-            tx.reference.create({
-              data: {
-                url: ref.url.trim(),
-                title: ref.title ? ref.title.trim() : "",
-                news: { connect: { id } },
-              },
-            })
-          )
-        );
+      for (const img of validImages) {
+        await prisma.image.create({
+          data: {
+            url: img.url,
+            path: img.path,
+            news: { connect: { id } },
+          },
+        });
       }
+    }
 
-      // 返回更新後的新聞數據，包含新的參考資料
-      return tx.news.findUnique({
-        where: { id },
-        include: {
-          images: true,
-          tags: true,
-          references: true,
-        },
-      });
+    // 步驟 5: 處理參考資料
+    console.log(`[API] 步驟 5: 處理參考資料 (${safeReferences.length} 條)`);
+    await prisma.reference.deleteMany({
+      where: { newsId: id },
+    });
+
+    if (safeReferences.length > 0) {
+      const validReferences = safeReferences.filter(
+        (ref) =>
+          ref &&
+          typeof ref === "object" &&
+          ref.url &&
+          typeof ref.url === "string"
+      );
+
+      console.log(`找到 ${validReferences.length} 個有效參考資料，準備新增`);
+
+      for (const ref of validReferences) {
+        await prisma.reference.create({
+          data: {
+            url: ref.url.trim(),
+            title: ref.title ? ref.title.trim() : "",
+            newsId: id,
+          },
+        });
+      }
+    }
+
+    // 步驟 6: 獲取更新後的完整數據
+    console.log(`[API] 步驟 6: 獲取更新後的完整數據`);
+    const result = await prisma.news.findUnique({
+      where: { id },
+      include: {
+        images: true,
+        tags: true,
+        references: true,
+      },
     });
 
     console.log(`[API] News with id ${id} updated successfully`);
-    return NextResponse.json(updated);
+    return NextResponse.json(result);
   } catch (error) {
     console.error("=====================================================");
     console.error(
