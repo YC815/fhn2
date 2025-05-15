@@ -7,6 +7,7 @@ import Link from "next/link";
 import { TagSelector } from "@/components/TagSelector";
 import { fetchWithRetry } from "@/utils/fetchWithRetry";
 import { NavBar } from "@/components/NavBar";
+import { Footer } from "@/components/Footer";
 import { motion, useSpring, useTransform, useMotionValue } from "framer-motion";
 
 // 定義新聞數據結構
@@ -572,6 +573,7 @@ export default function HomePage() {
           </div>
         </div>
       </main>
+      <Footer />
     </>
   );
 }
