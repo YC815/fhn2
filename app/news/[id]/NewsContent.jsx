@@ -4,12 +4,57 @@ import Image from "next/image";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import dynamic from "next/dynamic";
+import { fetchWithRetry } from "@/utils/fetchWithRetry";
 
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 
-export default function NewsContent({ news }) {
+export default function NewsContent({ news, newsId, apiUrl }) {
   const [isLoading, setIsLoading] = useState(true);
   const [contentReady, setContentReady] = useState(false);
+  const [newsData, setNewsData] = useState(news || null);
+  const [error, setError] = useState(null);
+
+  // 從 API 獲取新聞數據(客戶端數據獲取)
+  useEffect(() => {
+    // 如果已經有新聞數據，不需要再獲取
+    if (newsData) {
+      setIsLoading(false);
+      setContentReady(true);
+      return;
+    }
+
+    // 如果有 newsId 和 apiUrl，獲取新聞數據
+    if (newsId && apiUrl) {
+      const fetchNewsData = async () => {
+        try {
+          console.log(`🔍 開始獲取新聞數據，ID: ${newsId}`);
+          const data = await fetchWithRetry(apiUrl, {}, 3, 5000, true);
+
+          if (!data || !data.id) {
+            console.error("❌ 獲取到無效的新聞數據");
+            setError("無法載入新聞數據");
+            setIsLoading(false);
+            return;
+          }
+
+          console.log(`✅ 成功獲取新聞數據, 標題: ${data.homeTitle}`);
+          setNewsData(data);
+
+          // 延遲一點點顯示內容，確保轉場感覺平滑
+          setTimeout(() => {
+            setIsLoading(false);
+            setContentReady(true);
+          }, 300);
+        } catch (err) {
+          console.error("❌ 獲取新聞數據失敗:", err);
+          setError("載入新聞數據時出錯");
+          setIsLoading(false);
+        }
+      };
+
+      fetchNewsData();
+    }
+  }, [newsId, apiUrl, newsData]);
 
   // 添加閱讀進度指示器
   useEffect(() => {
@@ -34,39 +79,28 @@ export default function NewsContent({ news }) {
     };
   }, []);
 
-  // 模擬內容載入
-  useEffect(() => {
-    if (news) {
-      // 延遲一點點顯示內容，確保轉場感覺平滑
-      const timer = setTimeout(() => {
-        setIsLoading(false);
-        setContentReady(true);
-      }, 500);
-
-      return () => clearTimeout(timer);
-    }
-  }, [news]);
-
   // 調試信息：檢查 news 對象的內容
   useEffect(() => {
-    console.log("[NewsContent] 接收到的新聞數據:", {
-      id: news?.id,
-      homeTitle: news?.homeTitle,
-      title: news?.title,
-      subtitle: news?.subtitle,
-      contentFields: Object.keys(news || {}),
-      hasContent: !!news?.content,
-      contentType: typeof news?.content,
-      contentLength: news?.content?.length,
-      hasContentMD: !!news?.contentMD,
-      hasContentHTML: !!news?.contentHTML,
-      images: news?.images?.length || 0,
-      tags: news?.tags?.length || 0,
-      titleDisplay: "使用 homeTitle 以與主頁保持一致"
-    });
-  }, [news]);
+    if (newsData) {
+      console.log("[NewsContent] 接收到的新聞數據:", {
+        id: newsData?.id,
+        homeTitle: newsData?.homeTitle,
+        title: newsData?.title,
+        subtitle: newsData?.subtitle,
+        contentFields: Object.keys(newsData || {}),
+        hasContent: !!newsData?.content,
+        contentType: typeof newsData?.content,
+        contentLength: newsData?.content?.length,
+        hasContentMD: !!newsData?.contentMD,
+        hasContentHTML: !!newsData?.contentHTML,
+        images: newsData?.images?.length || 0,
+        tags: newsData?.tags?.length || 0,
+        titleDisplay: "使用 homeTitle 以與主頁保持一致"
+      });
+    }
+  }, [newsData]);
 
-  const content = news.contentMD || news.contentHTML || "";
+  const content = newsData?.contentMD || newsData?.contentHTML || "";
 
   // 自定義圖片渲染，實現markdown內圖片的懶加載
   const customRenderers = {
@@ -123,6 +157,22 @@ export default function NewsContent({ news }) {
         <div className="h-4 bg-gray-200 dark:bg-zinc-700 rounded-md w-full"></div>
         <div className="h-4 bg-gray-200 dark:bg-zinc-700 rounded-md w-11/12"></div>
         <div className="h-4 bg-gray-200 dark:bg-zinc-700 rounded-md w-10/12"></div>
+      </div>
+    </div>
+  );
+
+  // 錯誤顯示組件
+  const ErrorDisplay = () => (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] py-20">
+      <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-lg mx-auto text-center">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-red-500 dark:text-red-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <h2 className="text-xl font-bold text-red-700 dark:text-red-300 mb-2">載入失敗</h2>
+        <p className="text-red-600 dark:text-red-300 mb-4">{error || "無法載入新聞內容，請稍後再試"}</p>
+        <a href="/" className="inline-block px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors">
+          返回主頁
+        </a>
       </div>
     </div>
   );
@@ -305,32 +355,34 @@ export default function NewsContent({ news }) {
           </a>
         </div>
 
-        {/* 根據加載狀態顯示骨架屏或內容 */}
+        {/* 根據狀態顯示不同內容 */}
         {isLoading ? (
           <LoadingSkeleton />
-        ) : (
+        ) : error ? (
+          <ErrorDisplay />
+        ) : contentReady && newsData ? (
           <>
             {/* 標題 & 副標題 */}
             <div className="mb-8 pt-20">
-              <h1 className="text-4xl font-bold mb-2">{news.homeTitle}</h1>
+              <h1 className="text-4xl font-bold mb-2">{newsData.homeTitle}</h1>
 
-              {news.subtitle && (
-                <p className="italic text-lg mb-6">{news.subtitle}</p>
+              {newsData.subtitle && (
+                <p className="italic text-lg mb-6">{newsData.subtitle}</p>
               )}
 
               {/* 發佈時間和更新時間 */}
               <div className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
                 <div>
                   <span className="font-semibold">發佈時間：</span>
-                  {new Date(news.createdAt).toLocaleString('zh-TW', {
+                  {new Date(newsData.createdAt).toLocaleString('zh-TW', {
                     year: 'numeric', month: 'long', day: 'numeric',
                     hour: '2-digit', minute: '2-digit'
                   })}
                 </div>
-                {news.updatedAt && news.updatedAt !== news.createdAt && (
+                {newsData.updatedAt && newsData.updatedAt !== newsData.createdAt && (
                   <div>
                     <span className="font-semibold">更新時間：</span>
-                    {new Date(news.updatedAt).toLocaleString('zh-TW', {
+                    {new Date(newsData.updatedAt).toLocaleString('zh-TW', {
                       year: 'numeric', month: 'long', day: 'numeric',
                       hour: '2-digit', minute: '2-digit'
                     })}
@@ -340,7 +392,7 @@ export default function NewsContent({ news }) {
 
               {/* 標籤 */}
               <div className="flex flex-wrap gap-2 mt-4">
-                {news.tags.map((tag) => (
+                {newsData.tags.map((tag) => (
                   <span
                     key={tag.id}
                     className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 px-3 py-1 rounded-full text-sm"
@@ -369,7 +421,7 @@ export default function NewsContent({ news }) {
 
             {/* 處理 Markdown 或 HTML 內容 */}
             <div className="prose prose-zinc dark:prose-invert max-w-none">
-              {news.contentMD ? (
+              {newsData.contentMD ? (
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeRaw]}
@@ -403,11 +455,11 @@ export default function NewsContent({ news }) {
             )} */}
 
             {/* 參考資料區塊 */}
-            {news.references && news.references.length > 0 && (
+            {newsData.references && newsData.references.length > 0 && (
               <div className="mt-16 border-t border-gray-200 dark:border-gray-700 pt-8">
                 <h3 className="text-xl font-bold mb-6">參考資料</h3>
                 <div className="space-y-4">
-                  {news.references.map((ref, idx) => (
+                  {newsData.references.map((ref, idx) => (
                     <div key={ref.id || idx} className="flex items-start gap-2">
                       <div className="mt-0.5 w-6 flex-shrink-0 text-gray-700 dark:text-gray-300">{idx + 1}.</div>
                       <div className="flex-1">
@@ -430,6 +482,8 @@ export default function NewsContent({ news }) {
               </div>
             )}
           </>
+        ) : (
+          <LoadingSkeleton />
         )}
       </article>
     </div>
