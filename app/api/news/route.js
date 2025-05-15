@@ -127,67 +127,7 @@ export async function GET(request) {
 // body: { homeTitle, title, subtitle?, contentMD, contentHTML, coverImage?, tagNames: string[], images: [{url,path}] }
 export async function POST(request) {
   try {
-    console.log("=====================================================");
     console.log(`🟢 開始執行 POST /api/news API - ${new Date().toISOString()}`);
-
-    // 檢查環境變數
-    console.log("環境變數檢查:");
-    console.log("- NODE_ENV:", process.env.NODE_ENV);
-    console.log("- DATABASE_URL 存在:", Boolean(process.env.DATABASE_URL));
-    const dbUrlLength = process.env.DATABASE_URL
-      ? process.env.DATABASE_URL.length
-      : 0;
-    console.log("- DATABASE_URL 長度:", dbUrlLength);
-    console.log(
-      "- DATABASE_URL 前20字元:",
-      dbUrlLength > 20
-        ? process.env.DATABASE_URL.substring(0, 20) + "..."
-        : "N/A"
-    );
-    console.log("- DIRECT_URL 存在:", Boolean(process.env.DIRECT_URL));
-    console.log(
-      "- SUPABASE_SERVICE_KEY 存在:",
-      Boolean(process.env.SUPABASE_SERVICE_KEY)
-    );
-    console.log(
-      "- SUPABASE URL 存在:",
-      Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL)
-    );
-
-    let requestBody;
-    try {
-      requestBody = await request.json();
-    } catch (parseError) {
-      console.error("❌ 解析請求體失敗:", parseError);
-      return NextResponse.json(
-        { error: "無效的請求格式", details: parseError.message },
-        { status: 400 }
-      );
-    }
-
-    // 檢查環境變數
-    console.log("環境變數檢查:");
-    console.log("- NODE_ENV:", process.env.NODE_ENV);
-    console.log("- DATABASE_URL 存在:", Boolean(process.env.DATABASE_URL));
-    const dbUrlLength = process.env.DATABASE_URL
-      ? process.env.DATABASE_URL.length
-      : 0;
-    console.log("- DATABASE_URL 長度:", dbUrlLength);
-    console.log(
-      "- DATABASE_URL 前20字元:",
-      dbUrlLength > 20
-        ? process.env.DATABASE_URL.substring(0, 20) + "..."
-        : "N/A"
-    );
-    console.log("- DIRECT_URL 存在:", Boolean(process.env.DIRECT_URL));
-    console.log(
-      "- SUPABASE_SERVICE_KEY 存在:",
-      Boolean(process.env.SUPABASE_SERVICE_KEY)
-    );
-    console.log(
-      "- SUPABASE URL 存在:",
-      Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL)
-    );
 
     let requestBody;
     try {
@@ -228,25 +168,6 @@ export async function POST(request) {
         { status: 400 }
       );
     }
-      references = [],
-    } = requestBody;
-
-    // 基本驗證
-    if (!title || !title.trim()) {
-      console.error("❌ 缺少必要欄位: title");
-      return NextResponse.json(
-        { error: "缺少必要欄位", details: "標題不能為空" },
-        { status: 400 }
-      );
-    }
-
-    if (!contentMD || !contentMD.trim()) {
-      console.error("❌ 缺少必要欄位: contentMD");
-      return NextResponse.json(
-        { error: "缺少必要欄位", details: "內容不能為空" },
-        { status: 400 }
-      );
-    }
 
     console.log("接收到的數據:", {
       homeTitle,
@@ -254,28 +175,8 @@ export async function POST(request) {
       subtitle: subtitle || "(無)",
       contentLength: contentMD ? contentMD.length : 0,
       coverImage: coverImage ? "有圖片" : "(無)",
-      coverImage: coverImage ? "有圖片" : "(無)",
       tagNames,
       imageCount: images.length,
-      referencesCount: references.length,
-    });
-
-    // 先嘗試檢查數據庫連接
-    try {
-      console.log("🔍 測試數據庫連接...");
-      await prisma.$queryRaw`SELECT 1`;
-      console.log("✅ 數據庫連接測試成功");
-    } catch (connError) {
-      console.error("❌ 數據庫連接測試失敗:", connError);
-      console.error("錯誤詳情:", {
-        name: connError.name,
-        message: connError.message,
-        code: connError.code,
-        clientVersion: connError.clientVersion,
-        meta: connError.meta,
-      });
-      // 不立即拋出錯誤，繼續嘗試創建
-    }
       referencesCount: references.length,
     });
 
@@ -326,13 +227,7 @@ export async function POST(request) {
               (ref) => ref.url && ref.url.trim() !== ""
             ),
           },
-          references: {
-            create: references.filter(
-              (ref) => ref.url && ref.url.trim() !== ""
-            ),
-          },
         },
-        include: { images: true, tags: true, references: true },
         include: { images: true, tags: true, references: true },
       });
 
@@ -360,33 +255,10 @@ export async function POST(request) {
       if (prismaError.code === "P2002") {
         console.error("⚠️ 違反唯一約束，可能是嘗試創建重複的記錄");
       }
-      console.error("錯誤堆疊:", prismaError.stack);
-
-      // 檢查是否為資料庫連接錯誤
-      if (
-        prismaError.code === "P1001" ||
-        prismaError.message.includes("connect")
-      ) {
-        console.error("⚠️ 資料庫連接錯誤，請檢查 DATABASE_URL 環境變數");
-      }
-
-      // 檢查是否為模型定義錯誤
-      if (prismaError.code === "P2002") {
-        console.error("⚠️ 違反唯一約束，可能是嘗試創建重複的記錄");
-      }
 
       try {
         console.error(
           "詳細錯誤信息:",
-          JSON.stringify(
-            {
-              clientVersion: prismaError.clientVersion,
-              meta: prismaError.meta,
-              errorCode: prismaError.errorCode,
-            },
-            null,
-            2
-          )
           JSON.stringify(
             {
               clientVersion: prismaError.clientVersion,
@@ -539,39 +411,6 @@ export async function POST(request) {
           console.log("ℹ️ 無參考資料需處理");
         }
 
-        // 3.5 處理參考資料 references
-        if (references && references.length > 0) {
-          console.log(`🔄 處理 ${references.length} 筆參考資料...`);
-
-          const filteredReferences = references.filter(
-            (ref) => ref.url && ref.url.trim() !== ""
-          );
-
-          if (filteredReferences.length > 0) {
-            for (const reference of filteredReferences) {
-              console.log(`🔄 處理參考資料 ${reference.url}...`);
-              const { error: refError } = await supabase
-                .from("references")
-                .insert({
-                  url: reference.url.trim(),
-                  title: (reference.title || "").trim(),
-                  news_id: newsData.id,
-                  created_at: new Date().toISOString(),
-                });
-
-              if (refError) {
-                console.error("❌ 儲存參考資料失敗:", refError);
-                throw refError;
-              }
-              console.log(`✅ 成功儲存參考資料`);
-            }
-          } else {
-            console.log("ℹ️ 參考資料均為空，跳過處理");
-          }
-        } else {
-          console.log("ℹ️ 無參考資料需處理");
-        }
-
         // 4. 獲取完整數據返回
         console.log("🔄 獲取最終完整數據...");
         const { data: created, error: fetchError } = await supabase
@@ -580,8 +419,6 @@ export async function POST(request) {
             `
             *,
             images (*),
-            news_tags (tag_id, tags (name)),
-            references (*)
             news_tags (tag_id, tags (name)),
             references (*)
           `
@@ -604,7 +441,6 @@ export async function POST(request) {
           createdAt: created.created_at,
           updatedAt: created.updated_at,
           tags: created.news_tags.map((nt) => ({ name: nt.tags.name })),
-          references: created.references || [],
           references: created.references || [],
         };
 

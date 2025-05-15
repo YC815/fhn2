@@ -1,6 +1,6 @@
 // app/api/news/[id]/route.js
 import { NextResponse } from "next/server";
-import supabase from "@/utils/supabase";
+import { supabase } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 
 // GET /api/news/:id
@@ -113,6 +113,51 @@ export async function GET(request, { params }) {
 export async function PUT(request, { params }) {
   try {
     const { id } = await Promise.resolve(params);
+    console.log(`[API] 開始更新 ID 為 ${id} 的新聞 - ${new Date().toISOString()}`);
+    
+    // 解析請求數據
+    let requestData;
+    try {
+      requestData = await request.json();
+      console.log('=====================================================');
+      console.log(`🔵 收到的請求數據摘要 (ID: ${id}):`);
+      console.log('- homeTitle:', requestData.homeTitle ? '存在' : '不存在');
+      console.log('- title:', requestData.title || '不存在');
+      console.log('- subtitle:', requestData.subtitle || '不存在');
+      console.log('- contentMD 長度:', requestData.contentMD ? requestData.contentMD.length : 0);
+      console.log('- contentHTML 長度:', requestData.contentHTML ? requestData.contentHTML.length : 0);
+      console.log('- coverImage:', requestData.coverImage ? '存在' : '不存在');
+      console.log('- tagNames 數量:', Array.isArray(requestData.tagNames) ? requestData.tagNames.length : 0);
+      console.log('- imagesToCreate 數量:', Array.isArray(requestData.imagesToCreate) ? requestData.imagesToCreate.length : 0);
+      console.log('- imageIdsToDelete 數量:', Array.isArray(requestData.imageIdsToDelete) ? requestData.imageIdsToDelete.length : 0);
+      console.log('- references 數量:', Array.isArray(requestData.references) ? requestData.references.length : 0);
+      
+      // 檢查必要字段
+      if (!requestData.title || !requestData.title.trim()) {
+        console.error('❌ 缺少必要欄位: title');
+        return NextResponse.json(
+          { error: '缺少必要欄位', details: '標題不能為空' },
+          { status: 400 }
+        );
+      }
+      
+      if (!requestData.contentMD || !requestData.contentMD.trim()) {
+        console.error('❌ 缺少必要欄位: contentMD');
+        return NextResponse.json(
+          { error: '缺少必要欄位', details: '內容不能為空' },
+          { status: 400 }
+        );
+      }
+      
+      console.log('=====================================================');
+    } catch (parseError) {
+      console.error('❌ 解析請求體失敗:', parseError);
+      return NextResponse.json(
+        { error: '無效的請求格式', details: parseError.message },
+        { status: 400 }
+      );
+    }
+    
     const {
       homeTitle,
       title,
@@ -124,7 +169,22 @@ export async function PUT(request, { params }) {
       imagesToCreate = [],
       imageIdsToDelete = [],
       references = [],
-    } = await request.json();
+    } = requestData;
+
+    // 測試 Supabase 客戶端連接
+    try {
+      console.log('🔄 正在測試 Supabase 連接...');
+      const { data, error } = await supabase.from('_test').select('*').limit(1).maybeSingle();
+      if (error && !error.message.includes('does not exist')) {
+        console.error('❌ Supabase 連接測試失敗:', error);
+        // 不拋出錯誤，僅記錄錯誤
+      } else {
+        console.log('✅ Supabase 連接測試成功');
+      }
+    } catch (supabaseTestError) {
+      console.error('❌ Supabase 連接測試拋出異常:', supabaseTestError);
+      // 不拋出錯誤，僅記錄錯誤
+    }
 
     // 先嘗試使用 Prisma
     try {
@@ -339,6 +399,49 @@ export async function PUT(request, { params }) {
 
       console.log(`[API] News with id ${id} updated with Supabase`);
       return NextResponse.json(formattedNews);
+    } catch (error) {
+      console.error('=====================================================');
+      console.error(`🔴 PUT /api/news/${params.id} 更新失敗 (${new Date().toISOString()}):`);
+      console.error('錯誤類型:', error.name);
+      console.error('錯誤消息:', error.message);
+      console.error('錯誤代碼:', error.code);
+      console.error('錯誤詳情:', error.details || '無');
+      
+      // 檢查是否為 Supabase 錯誤
+      if (error.code && error.code.startsWith('PGRST')) {
+        console.error('⚠️ Supabase PostgreSQL 錯誤，可能是權限問題');
+      }
+      
+      // 檢查是否為連接錯誤
+      if (error.message && error.message.includes('connect')) {
+        console.error('⚠️ 資料庫連接錯誤 - 可能的原因:');
+        console.error('1. 資料庫服務器可能暫時離線');
+        console.error('2. 網絡連接問題');
+        console.error('3. 資料庫憑證可能已過期');
+      }
+      
+      // 檢查是否為內容過大錯誤
+      let errorMessage = error.message;
+      if (
+        error.message && (
+          error.message.includes('too large') || 
+          error.message.includes('exceeds') || 
+          error.message.includes('size') ||
+          error.message.includes('limit')
+        )
+      ) {
+        console.error('⚠️ 可能是內容過大導致的錯誤');
+        console.error('建議：縮減內容長度或分割為多個記錄');
+        errorMessage = '內容可能過大，請縮減文章長度或分割為多個記錄';
+      }
+      
+      console.error('堆棧跟踪:', error.stack);
+      console.error('=====================================================');
+      
+      return NextResponse.json(
+        { error: '更新新聞失敗', details: errorMessage },
+        { status: 500 }
+      );
     }
   } catch (error) {
     console.error('Error updating news:', error);
