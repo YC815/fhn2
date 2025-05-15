@@ -25,6 +25,7 @@ export default function AdminDashboard() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [newsToDelete, setNewsToDelete] = useState(null);
   const [loadingItems, setLoadingItems] = useState({});
+  const [verifyingHome, setVerifyingHome] = useState(false);
 
   // 檢查登入狀態和權限
   useEffect(() => {
@@ -168,6 +169,55 @@ export default function AdminDashboard() {
     setNewsToDelete(null);
   };
 
+  // 驗證主頁顯示功能
+  const verifyHomeDisplay = async (newsId) => {
+    try {
+      // 如果提供了特定新聞ID，就設置該新聞的載入狀態
+      if (newsId) {
+        setLoadingItems(prev => ({ ...prev, [`verify_${newsId}`]: true }));
+      } else {
+        setVerifyingHome(true);
+      }
+
+      // 清除前端緩存
+      if (typeof window !== "undefined") {
+        Object.keys(sessionStorage).forEach((key) => {
+          if (key.startsWith("news-cache")) {
+            sessionStorage.removeItem(key);
+            sessionStorage.removeItem(`${key}-time`);
+          }
+        });
+      }
+
+      // 重新獲取新聞列表以確保數據同步
+      await fetchNews();
+
+      // 打開主頁在新視窗
+      window.open('/', '_blank');
+
+      // 提示用戶檢查主頁
+      setTimeout(() => {
+        if (newsId) {
+          // 清除特定新聞的載入狀態
+          setLoadingItems(prev => ({ ...prev, [`verify_${newsId}`]: false }));
+        } else {
+          setVerifyingHome(false);
+        }
+        alert('已為您打開主頁，請檢查新聞是否正確顯示。若仍未顯示，請嘗試在主頁重新整理(Ctrl+F5)。');
+      }, 1000);
+
+    } catch (error) {
+      console.error("驗證顯示設置時出錯:", error);
+      alert("驗證顯示設置失敗: " + error.message);
+      // 清除載入狀態
+      if (newsId) {
+        setLoadingItems(prev => ({ ...prev, [`verify_${newsId}`]: false }));
+      } else {
+        setVerifyingHome(false);
+      }
+    }
+  };
+
   // 如果正在檢查權限或加載中，顯示加載動畫
   if (isCheckingAuth || isLoading) {
     return (
@@ -226,7 +276,39 @@ export default function AdminDashboard() {
 
         {/* 編輯現有新聞 */}
         <div className="bg-white shadow rounded-lg dark:bg-zinc-700 p-6">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">編輯以前的新聞</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white">編輯以前的新聞</h2>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => fetchNews()}
+                className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                重新載入
+              </button>
+              <button
+                onClick={() => verifyHomeDisplay()}
+                disabled={verifyingHome}
+                className="px-3 py-1.5 text-sm bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 flex items-center"
+              >
+                {verifyingHome ? (
+                  <>
+                    <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    驗證中...
+                  </>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    驗證主頁顯示
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
 
           {newsList.length === 0 ? (
             <p className="text-gray-500 text-center py-4">目前沒有新聞</p>
@@ -294,6 +376,17 @@ export default function AdminDashboard() {
 
                               if (res.ok) {
                                 console.log(`更新成功：${newsItem.title} showOnHome = ${checked}`);
+
+                                // 清除前端緩存
+                                if (typeof window !== "undefined") {
+                                  Object.keys(sessionStorage).forEach((key) => {
+                                    if (key.startsWith("news-cache")) {
+                                      sessionStorage.removeItem(key);
+                                      sessionStorage.removeItem(`${key}-time`);
+                                    }
+                                  });
+                                }
+
                                 // 更新本地狀態，避免重新獲取整個列表
                                 setNewsList(prev =>
                                   prev.map(item =>
@@ -321,9 +414,28 @@ export default function AdminDashboard() {
                             <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-500 dark:border-blue-400"></div>
                           </div>
                         ) : (
-                          <span className="text-xs text-gray-500 dark:text-zinc-300">
-                            {newsItem.showOnHome ? "主頁顯示" : "主頁隱藏"}
-                          </span>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs text-gray-500 dark:text-zinc-300">
+                              {newsItem.showOnHome ? "主頁顯示" : "主頁隱藏"}
+                            </span>
+                            {newsItem.showOnHome && (
+                              <button
+                                onClick={() => verifyHomeDisplay(newsItem.id)}
+                                className="text-xs text-green-600 hover:text-green-800 ml-1"
+                                title="驗證此新聞是否顯示在主頁"
+                                disabled={loadingItems[`verify_${newsItem.id}`]}
+                              >
+                                {loadingItems[`verify_${newsItem.id}`] ? (
+                                  <div className="animate-spin h-4 w-4 border-t-2 border-b-2 border-green-500"></div>
+                                ) : (
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
+                                )}
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>

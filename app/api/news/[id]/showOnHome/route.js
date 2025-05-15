@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
+import { clearCache } from "@/app/api/news/route";
 
 export async function PATCH(request, context) {
   // 1. 從 URL 取得新聞 id - 注意使用 await
@@ -34,6 +33,9 @@ export async function PATCH(request, context) {
       where: { id },
       data: { showOnHome },
     });
+
+    // 新增: 清除緩存
+    clearCache();
 
     // 5. 回傳成功訊息
     return NextResponse.json({

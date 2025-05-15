@@ -34,7 +34,7 @@ function setCache(cacheKey, data) {
 }
 
 // 清空所有快取
-function clearCache() {
+export function clearCache() {
   newsCache.queries = {};
   newsCache.timestamp = 0;
   newsCache.data = null;
