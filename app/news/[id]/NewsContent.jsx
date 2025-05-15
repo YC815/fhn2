@@ -328,7 +328,7 @@ export default function NewsContent({ news, newsId, apiUrl }) {
           border-color: hsl(215, 20.2%, 15.1%);
         }
       `}</style>
-      <article className="relative max-w-3xl mx-auto px-4 lg:px-0">
+      <article className="relative max-w-2xl mx-auto px-4 lg:px-0">
         {/* 返回主頁按鈕 - 始終顯示 */}
         <div className="fixed left-4 top-4 z-40 mt-20">
           <a href="/" className="inline-block">
