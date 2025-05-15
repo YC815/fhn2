@@ -238,8 +238,8 @@ export default function HomePage() {
             </p>
             {/* 聯絡方式 */}
             <p className="text-sm">
-              若您發現任何問題，歡迎於社群平台留言，或透過 Discord 私訊技術總監
-              Yushun（@yc815）與我們聯繫，感謝您的理解與協助！
+              若您發現任何問題，歡迎於社群平台留言，或透過 Discord 私訊技術總監 Yushun（
+              <a href="https://discordapp.com/users/843219121122181140" target="_blank" rel="noopener noreferrer" className="underline text-blue-600 dark:text-blue-400">@yc815</a>）與我們聯繫，感謝您的理解與協助！
             </p>
           </div>
           {!isLoading && !error && filteredNewsList.length === 0 && (
