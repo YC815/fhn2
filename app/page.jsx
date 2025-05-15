@@ -314,21 +314,43 @@ export default function HomePage() {
                           <span className="text-zinc-400">無封面圖片</span>
                         </div>
                       )}
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent text-white p-4 space-y-2">
-                        <div className="flex gap-2 flex-wrap text-xs">
-                          {news.tags.slice(0, 3).map((tag) => (
-                            <span
+                      <motion.div
+                        className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent text-white p-4 space-y-2"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1, duration: 0.3 }}
+                      >
+                        <motion.div
+                          className="flex gap-2 flex-wrap text-xs"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: 0.2, duration: 0.3 }}
+                        >
+                          {news.tags.slice(0, 3).map((tag, index) => (
+                            <motion.span
                               key={tag.name}
                               className="bg-white/20 px-2 py-0.5 rounded"
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: 0.2 + index * 0.1, duration: 0.2 }}
+                              whileHover={{
+                                backgroundColor: "rgba(255, 255, 255, 0.3)",
+                                scale: 1.05
+                              }}
                             >
                               #{tag.name}
-                            </span>
+                            </motion.span>
                           ))}
-                        </div>
-                        <h3 className="text-xl font-bold line-clamp-2">
+                        </motion.div>
+                        <motion.h3
+                          className="text-xl font-bold line-clamp-2"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.3, duration: 0.3 }}
+                        >
                           {news.homeTitle}
-                        </h3>
-                      </div>
+                        </motion.h3>
+                      </motion.div>
                     </Link>
                   </motion.div>
                 ))
