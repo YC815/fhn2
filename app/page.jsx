@@ -7,6 +7,7 @@ import Link from "next/link";
 import { TagSelector } from "@/components/TagSelector";
 import { fetchWithRetry } from "@/utils/fetchWithRetry";
 import { NavBar } from "@/components/NavBar";
+import { motion } from "framer-motion";
 
 // 定義新聞數據結構
 // 注意：這裡使用 JSDoc 註解來提供類型提示
@@ -260,7 +261,8 @@ export default function HomePage() {
                 Array.from({ length: 6 }).map((_, i) => (
                   <div
                     key={i}
-                    className="col-span-1 aspect-square rounded-xl overflow-hidden shadow-md border-2 bg-gray-200 dark:bg-zinc-800 relative"
+                    className="col-span-1 aspect-square rounded-xl overflow-hidden shadow-md border-2 bg-gray-200 dark:bg-zinc-800 
+                     relative"
                   >
                     {/* 模擬圖片區域 */}
                     <div className="w-full h-full animate-pulse" />
@@ -283,45 +285,52 @@ export default function HomePage() {
                 </div>
               ) : filteredNewsList.length > 0 ? (
                 filteredNewsList.map((news) => (
-                  <Link
+                  <motion.div
                     key={news.id}
-                    href={`/news/${news.id}`}
-                    className="relative block aspect-square rounded-xl overflow-hidden shadow-md border-2 hover:shadow-lg transition-shadow"
-                    prefetch={true}
+                    whileHover={{ scale: 1.015 }}
+                    whileTap={{ scale: 0.95 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    className="col-span-1"
                   >
-                    {news.coverImage ? (
-                      <Image
-                        src={news.coverImage}
-                        alt={news.homeTitle}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        loading={filteredNewsList.indexOf(news) < 3 ? undefined : "lazy"}
-                        placeholder="blur"
-                        blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
-                        priority={filteredNewsList.indexOf(news) < 3}
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-                        <span className="text-zinc-400">無封面圖片</span>
+                    <Link
+                      href={`/news/${news.id}`}
+                      className="relative block aspect-square rounded-xl overflow-hidden shadow-md border-2 hover:shadow-lg transition-shadow border-stone-400 dark:border-stone-600"
+                      prefetch={true}
+                    >
+                      {news.coverImage ? (
+                        <Image
+                          src={news.coverImage}
+                          alt={news.homeTitle}
+                          fill
+                          className="object-cover "
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          loading={filteredNewsList.indexOf(news) < 3 ? undefined : "lazy"}
+                          placeholder="blur"
+                          blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+                          priority={filteredNewsList.indexOf(news) < 3}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center ">
+                          <span className="text-zinc-400">無封面圖片</span>
+                        </div>
+                      )}
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent text-white p-4 space-y-2">
+                        <div className="flex gap-2 flex-wrap text-xs">
+                          {news.tags.slice(0, 3).map((tag) => (
+                            <span
+                              key={tag.name}
+                              className="bg-white/20 px-2 py-0.5 rounded"
+                            >
+                              #{tag.name}
+                            </span>
+                          ))}
+                        </div>
+                        <h3 className="text-xl font-bold line-clamp-2">
+                          {news.homeTitle}
+                        </h3>
                       </div>
-                    )}
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent text-white p-4 space-y-2">
-                      <div className="flex gap-2 flex-wrap text-xs">
-                        {news.tags.slice(0, 3).map((tag) => (
-                          <span
-                            key={tag.name}
-                            className="bg-white/20 px-2 py-0.5 rounded"
-                          >
-                            #{tag.name}
-                          </span>
-                        ))}
-                      </div>
-                      <h3 className="text-xl font-bold line-clamp-2">
-                        {news.homeTitle}
-                      </h3>
-                    </div>
-                  </Link>
+                    </Link>
+                  </motion.div>
                 ))
               ) : null}
             </section>

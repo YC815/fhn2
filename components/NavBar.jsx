@@ -37,7 +37,7 @@ export function NavBar({ searchTerm = "", onSearchChange = () => { } }) {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
                         <Input
                             placeholder="搜尋新聞..."
-                            className="pl-10 w-36 md:w-64"
+                            className="pl-10 w-36 md:w-64 placeholder:text-zinc-400 border-stone-400 dark:border-stone-600"
                             value={searchTerm}
                             onChange={(e) => onSearchChange(e.target.value)}
                         />
