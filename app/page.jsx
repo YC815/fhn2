@@ -1,13 +1,13 @@
 // app/page.jsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { TagSelector } from "@/components/TagSelector";
 import { fetchWithRetry } from "@/utils/fetchWithRetry";
 import { NavBar } from "@/components/NavBar";
-import { motion } from "framer-motion";
+import { motion, useSpring, useTransform, useMotionValue } from "framer-motion";
 
 // 定義新聞數據結構
 // 注意：這裡使用 JSDoc 註解來提供類型提示
@@ -19,6 +19,215 @@ import { motion } from "framer-motion";
  * @property {Array<{name: string}>} tags - 標籤列表
  * @property {string} date - 發布日期
  */
+
+// 傾斜卡片組件
+const TiltCard = ({ children, className }) => {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const mouseDistance = useMotionValue(0); // 新增距離追蹤
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+
+  // 檢測深色模式
+  useEffect(() => {
+    // 初始檢測
+    setIsDarkMode(document.documentElement.classList.contains('dark'));
+
+    // 監聽深色模式變化
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach(mutation => {
+        if (mutation.attributeName === 'class') {
+          setIsDarkMode(document.documentElement.classList.contains('dark'));
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, { attributes: true });
+
+    return () => observer.disconnect();
+  }, []);
+
+  // 使用 useSpring 創建平滑的動畫效果 - 調整角度範圍以適應縮小後的卡片
+  const rotateX = useSpring(useTransform(y, [-100, 100], [6, -6]), {
+    stiffness: 300,
+    damping: 20
+  });
+  const rotateY = useSpring(useTransform(x, [-100, 100], [-6, 6]), {
+    stiffness: 300,
+    damping: 20
+  });
+
+  // 動態Z軸提升效果
+  const translateZ = useSpring(isHovered ? 8 : 0, {
+    stiffness: 300,
+    damping: 20
+  });
+
+  // 動態陰影效果
+  const shadowX = useSpring(useTransform(x, [-100, 100], [-12, 12]), {
+    stiffness: 300,
+    damping: 30
+  });
+  const shadowY = useSpring(useTransform(y, [-100, 100], [-12, 12]), {
+    stiffness: 300,
+    damping: 30
+  });
+  const shadowBlur = useSpring(useTransform(
+    mouseDistance, // 使用距離值來控制陰影模糊
+    [0, 100],
+    [8, 20]
+  ), {
+    stiffness: 400,
+    damping: 25
+  });
+
+  // 動態光源效果 - 深色模式下特別有用
+  const lightIntensity = useSpring(
+    isHovered ? (isDarkMode ? 0.8 : 0.15) : (isDarkMode ? 0.05 : 0.1),
+    { stiffness: 300, damping: 20 }
+  );
+
+  // 計算合成的陰影效果 - 根據深色模式使用不同顏色
+  const boxShadow = useTransform(
+    [shadowX, shadowY, shadowBlur, translateZ, lightIntensity],
+    ([latestX, latestY, latestBlur, latestZ, latestIntensity]) => {
+      // 根據深色模式使用不同的陰影顏色
+      const shadowColor = isDarkMode
+        ? `rgba(255, 255, 255, ${latestIntensity * 0.5})` // 深色模式下使用白色陰影，增加不透明度
+        : `rgba(0, 0, 0, 0.5)`; // 淺色模式下使用黑色陰影
+
+      // 添加多層陰影效果，更好地模擬3D光照
+      const intensity = isHovered ? 1.5 : 1.2; // 懸停時增強陰影效果
+
+      // 深色模式下的邊緣高光效果 - 只在懸停時顯示
+      const edgeShadow = isDarkMode && isHovered
+        ? `, 0px 0px 3px rgba(255, 255, 255, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.2)`
+        : '';
+
+      // 深色模式下添加額外的環境光效果 - 只在懸停時顯示
+      const ambientLight = isDarkMode && isHovered
+        ? `, 0 0 20px 5px rgba(255, 255, 255, 0.15)`
+        : '';
+
+      // 在深色模式下，非懸停狀態幾乎不顯示陰影，淺色模式下保持明顯陰影
+      const baseShadowOpacity = isDarkMode ? (isHovered ? 0.35 : 0) : (isHovered ? 0.35 : 0.15);
+
+      // 調整陰影大小以適應縮小後的卡片
+      const shadowSize = isHovered ? 8 : 6;
+      const shadowOffset = isHovered ? 3 : 2;
+
+      // 淺色模式下添加額外的環境陰影
+      const lightModeAmbient = !isDarkMode
+        ? `, 0 4px 15px rgba(0, 0, 0, ${isHovered ? 0.12 : 0.08})`
+        : '';
+
+      return `
+        ${-latestX * 0.5}px ${-latestY * 0.5}px ${latestBlur * 0.7 * intensity}px ${shadowColor},
+        0px ${shadowOffset + latestZ * 0.2}px ${shadowSize + latestZ}px rgba(${isDarkMode ? '255, 255, 255' : '0, 0, 0'}, ${baseShadowOpacity})${edgeShadow}${ambientLight}${lightModeAmbient}
+      `;
+    }
+  );
+
+  // 卡片邊框效果 - 深色模式下只在懸停時顯示，淺色模式下始終顯示
+  const border = isDarkMode
+    ? isHovered
+      ? "1px solid rgba(255, 255, 255, 0.2)"
+      : "1px solid rgba(255, 255, 255, 0)"
+    : "1px solid rgba(0, 0, 0, 0.1)";
+
+  function handleMouseMove(event) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    // 計算鼠標相對於卡片中心的位置
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    // 更新 motion values
+    x.set(event.clientX - centerX);
+    y.set(event.clientY - centerY);
+
+    // 計算距離來更新陰影模糊度
+    const distance = Math.sqrt(
+      Math.pow(event.clientX - centerX, 2) +
+      Math.pow(event.clientY - centerY, 2)
+    );
+    mouseDistance.set(Math.min(distance, 100));
+  }
+
+  function handleMouseEnter() {
+    setIsHovered(true);
+  }
+
+  function handleMouseLeave() {
+    // 重置為初始狀態
+    x.set(0);
+    y.set(0);
+    mouseDistance.set(0);
+    setIsHovered(false);
+  }
+
+  return (
+    <motion.div
+      className={`${className} perspective-1000 ${isDarkMode ? 'dark-tilt-card' : ''}`}
+      style={{
+        rotateX,
+        rotateY,
+        boxShadow,
+        z: translateZ,
+        border,
+        borderRadius: "0.75rem", // 確保邊框圓角與卡片一致
+        transformStyle: "preserve-3d",
+        transformOrigin: "center center",
+        willChange: "transform, box-shadow, border" // 提高性能
+      }}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      whileHover={{ scale: 1.02 }}
+      transition={{
+        scale: { type: "spring", stiffness: 400, damping: 17 },
+        boxShadow: { type: "spring", stiffness: 300, damping: 20 }
+      }}
+    >
+      <motion.div style={{
+        transform: "translateZ(12px)", // 稍微降低Z軸高度
+        transformStyle: "preserve-3d",
+        // 深色模式下僅在懸停時添加微妙發光效果
+        filter: isDarkMode && isHovered ? 'brightness(1.15) contrast(1.05)' : 'none',
+        transition: 'filter 0.3s ease',
+        position: 'relative',
+        zIndex: 2
+      }}>
+        {children}
+      </motion.div>
+
+      {isDarkMode && (
+        <motion.div
+          className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none"
+          style={{
+            background: 'radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 50%)',
+            opacity: 0, // 初始不顯示
+            zIndex: 1,
+            transition: 'opacity 0.3s ease'
+          }}
+          animate={{
+            opacity: isHovered ? 0.8 : 0
+          }}
+          transition={{
+            opacity: { duration: 0.3 }
+          }}
+          onMouseMove={(e) => {
+            if (!isHovered) return; // 非懸停狀態不更新光暈位置
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = ((e.clientX - rect.left) / rect.width) * 100;
+            const y = ((e.clientY - rect.top) / rect.height) * 100;
+            e.currentTarget.style.setProperty('--mouse-x', `${x}%`);
+            e.currentTarget.style.setProperty('--mouse-y', `${y}%`);
+          }}
+        />
+      )}
+    </motion.div>
+  );
+};
 
 export default function HomePage() {
   const [selectedTags, setSelectedTags] = useState([]);
@@ -185,18 +394,18 @@ export default function HomePage() {
     <>
       <NavBar searchTerm={searchTerm} onSearchChange={handleSearchChange} />
       <main className="min-h-screen bg-white dark:bg-zinc-900 px-6 pb-24 pt-20">
-        <div className="relative">
+        <div className="relative max-w-7xl mx-auto">
           {/* Hero 區塊 */}
           <section className="text-center pt-12 pb-8">
             <h1 className="text-4xl font-bold mb-2">遠望地平線</h1>
-            <p className="text-zinc-500 dark:text-zinc-400">
-              站在地平線的邊緣，看見世界的裂縫。
+            <p className="text-zinc-500 dark:text-zinc-400 pt-2">
+              選讀國際，望向遠方。<br />遠望地平線 Far Horizon News｜讓新聞不只是新聞。
             </p>
           </section>
 
           {/* 標籤選擇器區域 - 移除固定定位 */}
           <div className="bg-white dark:bg-zinc-900 -mx-6 px-6 pt-4 pb-2 border-b border-zinc-200 dark:border-zinc-800">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-5xl mx-auto">
               <div className="flex flex-col items-center">
                 <div className="flex justify-between w-full max-w-2xl mb-2">
                   <TagSelector onChange={handleTagChange} className="flex-1" />
@@ -226,7 +435,7 @@ export default function HomePage() {
           {/* 新增：網站開發階段紅色提示卡片 */}
           <div
             className="
-            max-w-4xl mx-auto mt-4 p-4
+            max-w-5xl mx-auto mt-4 p-4
             bg-red-50 border border-red-300 text-red-900
             rounded-lg text-center shadow
             dark:bg-red-900 dark:border-red-700 dark:text-red-100
@@ -244,7 +453,7 @@ export default function HomePage() {
             </p>
           </div>
           {!isLoading && !error && filteredNewsList.length === 0 && (
-            <div className="max-w-4xl mx-auto mt-4 p-4 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-center">
+            <div className="max-w-5xl mx-auto mt-4 p-4 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-center">
               <p className="text-zinc-700 dark:text-zinc-300">
                 {searchTerm.trim()
                   ? "找不到符合搜尋條件的新聞。"
@@ -254,15 +463,15 @@ export default function HomePage() {
           )}
 
           {/* 卡片區 - 使用 relative 確保在正確的圖層 */}
-          <div className="relative z-10 mt-8">
-            <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="relative z-10 mt-8 max-w-6xl mx-auto px-2">
+            <section className="grid gap-8 sm:gap-10 md:gap-8 sm:grid-cols-2 lg:grid-cols-3">
               {isLoading ? (
                 // 改進的骨架屏
                 Array.from({ length: 6 }).map((_, i) => (
                   <div
                     key={i}
                     className="col-span-1 aspect-square rounded-xl overflow-hidden shadow-md border-2 bg-gray-200 dark:bg-zinc-800 
-                     relative"
+                     relative scale-95 transform-gpu"
                   >
                     {/* 模擬圖片區域 */}
                     <div className="w-full h-full animate-pulse" />
@@ -285,74 +494,78 @@ export default function HomePage() {
                 </div>
               ) : filteredNewsList.length > 0 ? (
                 filteredNewsList.map((news) => (
-                  <motion.div
+                  <TiltCard
                     key={news.id}
-                    whileHover={{ scale: 1.015 }}
-                    whileTap={{ scale: 0.95 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                    className="col-span-1"
+                    className="col-span-1 scale-95 transform-gpu"
                   >
-                    <Link
-                      href={`/news/${news.id}`}
-                      className="relative block aspect-square rounded-xl overflow-hidden shadow-md border-2 hover:shadow-lg transition-shadow border-stone-400 dark:border-stone-600"
-                      prefetch={true}
+                    <motion.div
+                      whileHover={{ scale: 1.015 }}
+                      whileTap={{ scale: 0.95 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                      className="w-full h-full overflow-hidden rounded-xl"
                     >
-                      {news.coverImage ? (
-                        <Image
-                          src={news.coverImage}
-                          alt={news.homeTitle}
-                          fill
-                          className="object-cover "
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                          loading={filteredNewsList.indexOf(news) < 3 ? undefined : "lazy"}
-                          placeholder="blur"
-                          blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
-                          priority={filteredNewsList.indexOf(news) < 3}
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center ">
-                          <span className="text-zinc-400">無封面圖片</span>
-                        </div>
-                      )}
-                      <motion.div
-                        className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent text-white p-4 space-y-2"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1, duration: 0.3 }}
+                      <Link
+                        href={`/news/${news.id}`}
+                        className="relative block aspect-square rounded-xl overflow-hidden shadow-md border border-stone-300 dark:border-stone-700 hover:shadow-lg transition-shadow w-full h-full"
+                        prefetch={true}
                       >
+                        {news.coverImage ? (
+                          <Image
+                            src={news.coverImage}
+                            alt={news.homeTitle}
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 640px) 95vw, (max-width: 1024px) 45vw, 30vw"
+                            loading={filteredNewsList.indexOf(news) < 3 ? undefined : "lazy"}
+                            placeholder="blur"
+                            blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+                            priority={filteredNewsList.indexOf(news) < 3}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                            <span className="text-zinc-400">無封面圖片</span>
+                          </div>
+                        )}
                         <motion.div
-                          className="flex gap-2 flex-wrap text-xs"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: 0.2, duration: 0.3 }}
-                        >
-                          {news.tags.slice(0, 3).map((tag, index) => (
-                            <motion.span
-                              key={tag.name}
-                              className="bg-white/20 px-2 py-0.5 rounded"
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: 0.2 + index * 0.1, duration: 0.2 }}
-                              whileHover={{
-                                backgroundColor: "rgba(255, 255, 255, 0.3)",
-                                scale: 1.05
-                              }}
-                            >
-                              #{tag.name}
-                            </motion.span>
-                          ))}
-                        </motion.div>
-                        <motion.h3
-                          className="text-xl font-bold line-clamp-2"
-                          initial={{ opacity: 0, y: 10 }}
+                          className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent text-white p-4 space-y-2"
+                          initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.3, duration: 0.3 }}
+                          transition={{ delay: 0.1, duration: 0.3 }}
                         >
-                          {news.homeTitle}
-                        </motion.h3>
-                      </motion.div>
-                    </Link>
-                  </motion.div>
+                          <motion.div
+                            className="flex gap-2 flex-wrap text-xs"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.2, duration: 0.3 }}
+                          >
+                            {news.tags.slice(0, 3).map((tag, index) => (
+                              <motion.span
+                                key={tag.name}
+                                className="bg-white/20 px-2 py-0.5 rounded"
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.2 + index * 0.1, duration: 0.2 }}
+                                whileHover={{
+                                  backgroundColor: "rgba(255, 255, 255, 0.3)",
+                                  scale: 1.05
+                                }}
+                              >
+                                #{tag.name}
+                              </motion.span>
+                            ))}
+                          </motion.div>
+                          <motion.h3
+                            className="text-xl font-bold line-clamp-2"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3, duration: 0.3 }}
+                          >
+                            {news.homeTitle}
+                          </motion.h3>
+                        </motion.div>
+                      </Link>
+                    </motion.div>
+                  </TiltCard>
                 ))
               ) : null}
             </section>
@@ -373,7 +586,7 @@ export default function HomePage() {
 //    `.+hmmmddmo     -mmddddddddddddddddddddddddddddddddddddddmmhhhhhhhh+
 //   odmmdddddddms` `+mmddddddddddddddddddddddddddddddddddddddddmmddhhhhh+
 //   ymdmmmmmmmmdmmdmmdddddddddddddmmddddddddddddddddddddddddddddmd:ydhhd:
-//   :Nmmmmmmmmmmmmmmddy+::+ydddms/:::/+osydmdddddddddddddddddddddN-`:+o:
+//   :Nmmmmmmmmmmmmmmddy+::+ydddms/:::/+osydmdddddddddddddddddddN-`:+o:
 //    ymmmmmmmmmmmmmmdo.`.``/hmm/+hdd/``````-+ydmdddddddddddddddddmy
 //    .mmmmmmmmmmmmmmh:`-o+`:hm/`-o:.```````os/./ymddddddddddddddddN`
 //     /Nmmmmmmmmmmmmh:..::-od/``dMs````````/hNm:`-ymddddddddddddddN-
@@ -388,8 +601,8 @@ export default function HomePage() {
 //      ./:-```.-oyyhyhhhy+.`.:/::::///:.````..:ymNNmmo:/ymmmmmmmmmmmmmmmmmmmmmmmmN
 //        `:y:./yyyyyyyyhh///:..--:--.````..-/ymNNNNNy.``-hNNNNNmmmmmmmmmmmmmmNmh+-
 //        `ymdyhyyyyyyhhy/---o+///:::::://oyhmNNNNNNNo```:osyho/---:ymmNNNNmho:`
-//        `+hhhhhyyyyhhs-----y--o/------:+hhhhhhhddds.````````..-..-+dNds+-`
-//          `.:+oossyyyy:---:ssoy:------+hyyyyhhyyys-``....```..--..//`
+//        `+hhhhhyyyyhhs-----y--o/------:+hyyyyhhyyys-``....```..--..//`
+//          `.:+oossyyyy:---:ssoy:------+hyyyyhhyyys-`````..``````-o.
 //                     syysyysssho:-----ohyyyyhyhhyy/`````..``````-o.
 //                    `hssssssoyhhyo+++syyhhhhyyhyyh+:::-..-:::::::.
 //                    :hysssyo/yhhssyysssssyhyhhhyhdmmy....`

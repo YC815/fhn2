@@ -192,30 +192,51 @@ export function NavBar({ searchTerm = "", onSearchChange = () => { } }) {
                     transition={{ duration: 0.3 }}
                     style={{ willChange: "transform, opacity" }}
                 >
-                    <a
+                    <motion.a
                         href="https://www.threads.com/@farhorizonnews?igshid=NTc4MTIwNjQ2YQ=="
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                        className="text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors flex items-center justify-center w-8 h-8 rounded-full bg-white dark:bg-zinc-800 border border-stone-300 dark:border-stone-600 shadow-sm social-media-button"
+                        whileHover={{
+                            scale: 1.05,
+                            boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.1)"
+                        }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                        style={{ willChange: "transform, box-shadow" }}
                     >
-                        <AtSign className="w-5 h-5" />
-                    </a>
-                    <a
+                        <AtSign className="w-4 h-4" />
+                    </motion.a>
+                    <motion.a
                         href="https://www.instagram.com/farhorizonnews?igsh=eng1ZThsazJlZmRo"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                        className="text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors flex items-center justify-center w-8 h-8 rounded-full bg-white dark:bg-zinc-800 border border-stone-300 dark:border-stone-600 shadow-sm social-media-button"
+                        whileHover={{
+                            scale: 1.05,
+                            boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.1)"
+                        }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                        style={{ willChange: "transform, box-shadow" }}
                     >
-                        <Instagram className="w-5 h-5" />
-                    </a>
-                    <a
+                        <Instagram className="w-4 h-4" />
+                    </motion.a>
+                    <motion.a
                         href="https://www.facebook.com/share/1BjfcvnKgg/"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                        className="text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors flex items-center justify-center w-8 h-8 rounded-full bg-white dark:bg-zinc-800 border border-stone-300 dark:border-stone-600 shadow-sm social-media-button"
+                        whileHover={{
+                            scale: 1.05,
+                            boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.1)"
+                        }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                        style={{ willChange: "transform, box-shadow" }}
                     >
-                        <Facebook className="w-5 h-5" />
-                    </a>
+                        <Facebook className="w-4 h-4" />
+                    </motion.a>
                 </motion.div>
 
                 {/* 主題切換 */}
