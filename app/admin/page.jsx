@@ -176,23 +176,23 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-14">
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 py-14">
       {/* 刪除確認彈出視窗 */}
       {deleteConfirmOpen && newsToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
-            <h3 className="text-lg font-medium text-gray-900 mb-3">確定要刪除這則新聞嗎？</h3>
-            <p className="text-gray-600 mb-4">{newsToDelete.title}</p>
+          <div className="bg-white dark:bg-zinc-800 rounded-lg p-6 max-w-md mx-4">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">確定要刪除這則新聞嗎？</h3>
+            <p className="text-gray-600 dark:text-zinc-300 mb-4">{newsToDelete.title}</p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={cancelDelete}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 dark:text-gray-800 dark:bg-zinc-400 rounded-md hover:bg-gray-200"
               >
                 取消
               </button>
               <button
                 onClick={confirmDelete}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+                className="px-4 py-2 text-sm font-medium text-yellow-500 bg-red-600 rounded-md hover:bg-red-700"
               >
                 刪除
               </button>
@@ -203,15 +203,15 @@ export default function AdminDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">管理員儀表板</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">管理員儀表板</h1>
           <div className="flex items-center space-x-4">
             <UserButton afterSignOutUrl="/admin/login" />
           </div>
         </div>
 
         {/* 新增新聞表單 */}
-        <div className="bg-white shadow rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">新增新聞</h2>
+        <div className="bg-white shadow rounded-lg dark:bg-zinc-700 p-6 mb-8">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">新增新聞</h2>
           <div className="flex justify-center">
             <Link
               href="/admin/create"
@@ -223,8 +223,8 @@ export default function AdminDashboard() {
         </div>
 
         {/* 編輯現有新聞 */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">編輯以前的新聞</h2>
+        <div className="bg-white shadow rounded-lg dark:bg-zinc-700 p-6">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">編輯以前的新聞</h2>
 
           {newsList.length === 0 ? (
             <p className="text-gray-500 text-center py-4">目前沒有新聞</p>
@@ -233,7 +233,7 @@ export default function AdminDashboard() {
               {newsList.map((newsItem) => (
                 <div
                   key={newsItem.id}
-                  className="block p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                  className="block p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-600 transition-colors"
                 >
                   <div className="flex items-start space-x-4">
                     {newsItem.coverImage && (
@@ -246,23 +246,23 @@ export default function AdminDashboard() {
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-medium text-gray-900 truncate">
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white truncate">
                         {newsItem.title}
                       </h3>
                       {newsItem.subtitle && (
-                        <p className="text-sm text-gray-500 mb-1">{newsItem.subtitle}</p>
+                        <p className="text-sm text-gray-500 dark:text-zinc-300 mb-1">{newsItem.subtitle}</p>
                       )}
-                      <p className="text-sm text-gray-500 truncate">
+                      <p className="text-sm text-gray-500 dark:text-zinc-300 truncate">
                         {newsItem.contentMD.split('\n')[0]}
                       </p>
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-xs text-gray-400 dark:text-zinc-400 mt-1">
                         {new Date(newsItem.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                     <div className="flex space-x-2">
                       <Link
                         href={`/admin/edit/${newsItem.id}`}
-                        className="p-2 text-blue-600 hover:text-blue-800"
+                        className="p-2 text-blue-600 dark:text-blue-400 hover:text-blue-800"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 0L11.828 15.9 9 16l.1-2.828 6.586-6.586z" />

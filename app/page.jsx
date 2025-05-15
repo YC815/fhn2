@@ -98,6 +98,30 @@ export default function HomePage() {
     setSelectedTags([...selectedTags]); // 創建新陣列觸發 useEffect
   };
 
+  // 深色模式切換
+  useEffect(() => {
+    // 頁面載入時自動偵測
+    if (
+      localStorage.theme === 'dark' ||
+      (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    ) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
+
+  // 切換深色/淺色模式的函數
+  const toggleDarkMode = () => {
+    if (document.documentElement.classList.contains('dark')) {
+      document.documentElement.classList.remove('dark');
+      localStorage.theme = 'light';
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.theme = 'dark';
+    }
+  };
+
   return (
     <main className="min-h-screen bg-white dark:bg-zinc-900 px-6 pb-24">
       <div className="relative">
@@ -131,6 +155,23 @@ export default function HomePage() {
         </div>
 
         {/* 無結果提示 - 放在標籤選擇器下方 */}
+        {/* 新增：網站開發階段紅色提示卡片 */}
+        <div className="
+          max-w-4xl mx-auto mt-4 p-4
+          bg-red-50 border border-red-300 text-red-900
+          rounded-lg text-center shadow
+          dark:bg-red-900 dark:border-red-700 dark:text-red-100
+          transition-colors
+        ">
+          {/* 主要提示訊息 */}
+          <p className="font-semibold mb-1">
+            目前網站仍處於剛完成開發階段，資料獲取速度可能稍慢，亦有機會出現預期之外的錯誤。
+          </p>
+          {/* 聯絡方式 */}
+          <p className="text-sm">
+            若您發現任何問題，歡迎於社群平台留言，或透過 Discord 私訊技術總監 Yushun（@yc815）與我們聯繫，感謝您的理解與協助！
+          </p>
+        </div>
         {!isLoading && !error && newsList.length === 0 && (
           <div className="max-w-4xl mx-auto mt-4 p-4 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-center">
             <p className="text-zinc-700 dark:text-zinc-300">
@@ -195,6 +236,13 @@ export default function HomePage() {
           </section>
         </div>
       </div>
+      {/* 深色模式切換按鈕 */}
+      <button
+        onClick={toggleDarkMode}
+        className="fixed top-4 right-4 z-50 px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100"
+      >
+        切換深色模式
+      </button>
     </main>
   );
 }
