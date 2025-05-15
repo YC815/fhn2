@@ -27,10 +27,10 @@ export function NavBar({ searchTerm = "", onSearchChange = () => { } }) {
     // 處理視窗大小變化
     useEffect(() => {
         // 初始化判斷
-        setIsMobile(window.innerWidth < 768);
+        setIsMobile(window.innerWidth < 800);
 
         const handleResize = () => {
-            setIsMobile(window.innerWidth < 768);
+            setIsMobile(window.innerWidth < 800);
         };
 
         window.addEventListener("resize", handleResize);
