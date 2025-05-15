@@ -48,12 +48,24 @@ export default function HomePage() {
         // 如果沒有緩存或緩存已過期，則從 API 獲取數據
         // 添加時間戳參數防止瀏覽器快取
         const timestamp = new Date().getTime();
-        const data = await fetchWithRetry(`/api/news${tagQuery}${tagQuery ? '&' : '?'}t=${timestamp}`);
-        setNewsList(data);
+
+        // 獲取當前 hostname 和 port
+        const baseUrl = window.location.origin;
+        const apiUrl = `${baseUrl}/api/news${tagQuery}${tagQuery ? '&' : '?'}t=${timestamp}`;
+        console.log("請求 API:", apiUrl);
+
+        const response = await fetchWithRetry(apiUrl);
+
+        // 檢查 API 回傳的資料結構
+        console.log("API 回傳資料:", response);
+
+        // 正確處理 API 回傳的資料結構
+        const newsData = response.news || [];
+        setNewsList(newsData);
 
         // 儲存到 sessionStorage
         if (typeof window !== 'undefined') {
-          sessionStorage.setItem(cacheKey, JSON.stringify(data));
+          sessionStorage.setItem(cacheKey, JSON.stringify(newsData));
           sessionStorage.setItem(`${cacheKey}-time`, now.toString());
         }
       } catch (err) {

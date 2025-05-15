@@ -16,7 +16,14 @@ export function TagSelector({ onChange, className = '' }) {
         try {
             setError(null);
             setIsLoading(true);
-            const data = await fetchWithRetry('/api/tags');
+
+            // 獲取當前 hostname 和 port
+            const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+            const apiUrl = `${baseUrl}/api/tags`;
+            console.log("請求標籤 API:", apiUrl);
+
+            const data = await fetchWithRetry(apiUrl);
+            console.log("API 回傳標籤資料:", data);
             setAllTags(data);
         } catch (error) {
             console.error('Error fetching tags:', error);

@@ -79,7 +79,7 @@ export default function AdminDashboard() {
       setIsLoading(true);
       const response = await fetch('/api/news');
       const data = await response.json();
-      setNewsList(data);
+      setNewsList(data.news || []);
     } catch (error) {
       console.error('載入新聞失敗:', error);
     } finally {
@@ -100,18 +100,60 @@ export default function AdminDashboard() {
 
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/news/${newsToDelete.id}`, {
-        method: 'DELETE',
-      });
+      console.log(`嘗試刪除新聞 ID: ${newsToDelete.id}`);
 
-      if (response.ok) {
-        // 刪除成功後重新獲取新聞列表
-        fetchNews();
-      } else {
-        console.error('刪除新聞失敗');
+      let retryCount = 0;
+      let success = false;
+
+      // 最多重試3次
+      while (retryCount < 3 && !success) {
+        try {
+          const response = await fetch(`/api/news/${newsToDelete.id}`, {
+            method: 'DELETE',
+            headers: {
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache',
+            }
+          });
+
+          if (response.ok) {
+            success = true;
+            console.log(`成功刪除新聞 ID: ${newsToDelete.id}`);
+            // 刪除成功後重新獲取新聞列表
+            fetchNews();
+          } else {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('刪除新聞失敗:', errorData.details || errorData.error || '未知錯誤');
+
+            // 如果不是與數據庫連接相關的錯誤，不再重試
+            if (!(errorData.details?.includes('資料庫連接') ||
+              errorData.details?.includes('prepared statement'))) {
+              break;
+            }
+
+            retryCount++;
+            if (retryCount < 3) {
+              console.log(`將在1秒後重試刪除 (嘗試 ${retryCount}/3)...`);
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          }
+        } catch (error) {
+          console.error('刪除新聞時出錯:', error);
+          retryCount++;
+
+          if (retryCount < 3) {
+            console.log(`將在1秒後重試刪除 (嘗試 ${retryCount}/3)...`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+      }
+
+      if (!success) {
+        alert('刪除新聞失敗，請稍後再試');
       }
     } catch (error) {
       console.error('刪除新聞時出錯:', error);
+      alert('刪除新聞失敗：' + error.message);
     } finally {
       setDeleteConfirmOpen(false);
       setNewsToDelete(null);
