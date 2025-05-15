@@ -4,6 +4,29 @@ import { headers } from "next/headers";
 import Image from "next/image";
 import NewsContent from "./NewsContent";
 
+// 添加獲取超時和重試邏輯
+async function fetchWithTimeout(url, options = {}, timeout = 5000) {
+  const controller = new AbortController();
+  const { signal } = controller;
+
+  // 設置超時
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal,
+      cache: options.cache || "no-store" // 確保不使用過期的快取
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+}
+
+// 主頁面組件
 export default async function NewsPage({ params }) {
   const { id } = await Promise.resolve(params);
   // await headers() 新寫法
@@ -11,10 +34,17 @@ export default async function NewsPage({ params }) {
   const host = headersList.get("host");
   const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
   const url = `${protocol}://${host}/api/news/${id}`;
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) return notFound();
-  const news = await res.json();
-  return <NewsContent news={news} />;
+
+  // 使用帶有超時的獲取函數
+  try {
+    const res = await fetchWithTimeout(url, {}, 3000); // 3秒超時
+    if (!res.ok) return notFound();
+    const news = await res.json();
+    return <NewsContent news={news} />;
+  } catch (error) {
+    console.error("Failed to fetch news:", error);
+    return notFound();
+  }
   // return (
   //   <article className="prose prose-lg mx-auto py-12 px-4 dark:prose-invert">
   //     {/* 封面圖片 */}

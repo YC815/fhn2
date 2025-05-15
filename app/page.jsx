@@ -256,12 +256,26 @@ export default function HomePage() {
           <div className="relative z-10 mt-8">
             <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {isLoading ? (
-                // 骨架屏
-                Array.from({ length: 5 }).map((_, i) => (
+                // 改進的骨架屏
+                Array.from({ length: 6 }).map((_, i) => (
                   <div
                     key={i}
-                    className="h-32 bg-gray-200 dark:bg-zinc-800 rounded-lg animate-pulse col-span-1"
-                  />
+                    className="col-span-1 aspect-square rounded-xl overflow-hidden shadow-md border-2 bg-gray-200 dark:bg-zinc-800 relative"
+                  >
+                    {/* 模擬圖片區域 */}
+                    <div className="w-full h-full animate-pulse" />
+
+                    {/* 模擬標題和標籤區域 */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-gray-300/80 dark:from-zinc-700/80 to-transparent p-4 space-y-2">
+                      <div className="flex gap-2 flex-wrap">
+                        {Array.from({ length: 2 }).map((_, j) => (
+                          <div key={j} className="h-5 w-14 bg-gray-300 dark:bg-zinc-600 rounded animate-pulse" />
+                        ))}
+                      </div>
+                      <div className="h-6 bg-gray-300 dark:bg-zinc-600 rounded w-5/6 animate-pulse" />
+                      <div className="h-6 bg-gray-300 dark:bg-zinc-600 rounded w-4/6 animate-pulse" />
+                    </div>
+                  </div>
                 ))
               ) : error ? (
                 <div className="col-span-full text-center py-10">
@@ -281,6 +295,10 @@ export default function HomePage() {
                         fill
                         className="object-cover"
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        loading={filteredNewsList.indexOf(news) < 3 ? undefined : "lazy"}
+                        placeholder="blur"
+                        blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+                        priority={filteredNewsList.indexOf(news) < 3}
                       />
                     ) : (
                       <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">

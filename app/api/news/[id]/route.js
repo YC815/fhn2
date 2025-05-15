@@ -2,6 +2,48 @@
 import { NextResponse } from "next/server";
 import { prisma, testConnection } from "@/lib/prisma";
 
+// 為單一新聞添加快取機制
+const CACHE_TTL = 60 * 1000; // 1分鐘快取
+const newsDetailCache = new Map();
+
+// 從快取中獲取
+function getFromCache(id) {
+  if (!newsDetailCache.has(id)) return null;
+
+  const { data, timestamp } = newsDetailCache.get(id);
+  const now = Date.now();
+
+  // 檢查快取是否過期
+  if (now - timestamp < CACHE_TTL) {
+    console.log(`[API] 從快取獲取新聞 ID: ${id}`);
+    return data;
+  }
+
+  // 清除過期的快取
+  newsDetailCache.delete(id);
+  return null;
+}
+
+// 設置快取
+function setCache(id, data) {
+  newsDetailCache.set(id, {
+    data,
+    timestamp: Date.now(),
+  });
+  console.log(`[API] 設置快取，新聞 ID: ${id}`);
+}
+
+// 清空特定ID的快取
+function clearCache(id) {
+  if (id) {
+    newsDetailCache.delete(id);
+    console.log(`[API] 清除新聞快取，ID: ${id}`);
+  } else {
+    newsDetailCache.clear();
+    console.log(`[API] 清除所有新聞快取`);
+  }
+}
+
 // GET /api/news/:id
 export async function GET(request, { params }) {
   try {
@@ -13,6 +55,12 @@ export async function GET(request, { params }) {
     if (!id) {
       console.error("❌ 缺少有效的新聞ID");
       return NextResponse.json({ error: "缺少有效的新聞ID" }, { status: 400 });
+    }
+
+    // 檢查快取
+    const cachedNews = getFromCache(id);
+    if (cachedNews) {
+      return NextResponse.json(cachedNews);
     }
 
     // 使用連接測試函數
@@ -44,6 +92,9 @@ export async function GET(request, { params }) {
       tagsCount: record.tags?.length || 0,
       referencesCount: record.references?.length || 0,
     });
+
+    // 設置快取
+    setCache(id, record);
 
     return NextResponse.json(record);
   } catch (error) {
@@ -312,6 +363,11 @@ export async function PUT(request, { params }) {
     });
 
     console.log(`[API] News with id ${id} updated successfully`);
+    console.log("=====================================================");
+
+    // 清除此ID的快取
+    clearCache(id);
+
     return NextResponse.json(result);
   } catch (error) {
     console.error("=====================================================");
@@ -394,7 +450,15 @@ export async function DELETE(request, { params }) {
     });
 
     console.log(`[API] News with id ${id} deleted successfully`);
-    return NextResponse.json({ message: "新聞已成功刪除" });
+    console.log("=====================================================");
+
+    // 清除此ID的快取
+    clearCache(id);
+
+    return NextResponse.json({
+      success: true,
+      message: `新聞 ${id} 已成功刪除`,
+    });
   } catch (error) {
     console.error("=====================================================");
     console.error(

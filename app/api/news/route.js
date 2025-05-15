@@ -2,6 +2,45 @@
 import { NextResponse } from "next/server";
 import { prisma, testConnection } from "@/lib/prisma";
 
+// 新增記憶體快取機制
+const CACHE_TTL = 60 * 1000; // 快取有效時間（毫秒）：1分鐘
+const newsCache = {
+  data: null,
+  timestamp: 0,
+  queries: {}, // 針對不同的查詢參數進行快取
+};
+
+// 從快取中獲取結果，如果快取不存在或過期則返回 null
+function getFromCache(cacheKey) {
+  const cachedItem = newsCache.queries[cacheKey];
+  const now = Date.now();
+
+  // 檢查快取是否存在且未過期
+  if (cachedItem && now - cachedItem.timestamp < CACHE_TTL) {
+    console.log(`🟢 從快取中獲取結果，快取鍵: ${cacheKey}`);
+    return cachedItem.data;
+  }
+
+  return null;
+}
+
+// 設置快取
+function setCache(cacheKey, data) {
+  newsCache.queries[cacheKey] = {
+    data,
+    timestamp: Date.now(),
+  };
+  console.log(`🟢 已設置快取，快取鍵: ${cacheKey}`);
+}
+
+// 清空所有快取
+function clearCache() {
+  newsCache.queries = {};
+  newsCache.timestamp = 0;
+  newsCache.data = null;
+  console.log("🟢 已清空所有快取");
+}
+
 // GET /api/news?tags=AI,新聞
 export async function GET(request) {
   try {
@@ -20,6 +59,17 @@ export async function GET(request) {
     const page = parseInt(searchParams.get("page") || "1", 10);
     const pageSize = parseInt(searchParams.get("pageSize") || "20", 10);
     const skip = (page - 1) * pageSize;
+
+    // 構建快取鍵
+    const cacheKey = `news_${tagsParam || "all"}_${page}_${pageSize}`;
+
+    // 檢查快取
+    const cachedResult = getFromCache(cacheKey);
+    if (cachedResult) {
+      console.log(`✅ 返回快取結果，共 ${cachedResult.news.length} 筆數據`);
+      console.log("=====================================================");
+      return NextResponse.json(cachedResult);
+    }
 
     console.log("查詢參數:", {
       tagsParam,
@@ -79,7 +129,7 @@ export async function GET(request) {
     console.log(`✅ 成功查詢到 ${news.length} 筆新聞記錄，總共 ${total} 筆`);
     console.log("=====================================================");
 
-    return NextResponse.json({
+    const result = {
       news,
       pagination: {
         total,
@@ -87,7 +137,12 @@ export async function GET(request) {
         pageSize,
         pageCount: Math.ceil(total / pageSize),
       },
-    });
+    };
+
+    // 設置快取
+    setCache(cacheKey, result);
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error("=====================================================");
     console.error(`🔴 GET /api/news 錯誤 (${new Date().toISOString()}):`);
@@ -226,6 +281,9 @@ export async function POST(request) {
 
     console.log(`✅ 成功創建新聞，ID: ${news.id}`);
     console.log("=====================================================");
+
+    // 清空快取因為有新資料
+    clearCache();
 
     return NextResponse.json(news, { status: 201 });
   } catch (error) {

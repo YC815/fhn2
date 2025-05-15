@@ -25,7 +25,8 @@ export function NavBar({ searchTerm = "", onSearchChange = () => { } }) {
                     height={32}
                     className="rounded-full"
                 />
-                <span className="text-xl font-bold">遠望地平線</span>
+                <span className="text-xl font-bold whitespace-nowrap hidden sm:inline">遠望地平線</span>
+                <span className="text-lg font-bold whitespace-nowrap sm:hidden">遠望</span>
             </Link>
 
             {/* 右側：搜尋 + 主題切換 */}
@@ -36,7 +37,7 @@ export function NavBar({ searchTerm = "", onSearchChange = () => { } }) {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
                         <Input
                             placeholder="搜尋新聞..."
-                            className="pl-10 w-48 md:w-64"
+                            className="pl-10 w-36 md:w-64"
                             value={searchTerm}
                             onChange={(e) => onSearchChange(e.target.value)}
                         />

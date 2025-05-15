@@ -51,6 +51,34 @@ export default function NewsContent({ news }) {
 
   const content = news.contentMD || news.contentHTML || "";
 
+  // 自定義圖片渲染，實現markdown內圖片的懶加載
+  const customRenderers = {
+    img: ({ node, ...props }) => {
+      return (
+        <span className="block my-4 relative">
+          {props.src ? (
+            <Image
+              src={props.src}
+              alt={props.alt || ""}
+              width={600}
+              height={350}
+              className="mx-auto rounded shadow max-w-full h-auto max-h-[500px] object-contain"
+              loading="lazy"
+              placeholder="blur"
+              blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+            />
+          ) : (
+            <img
+              {...props}
+              className="mx-auto rounded shadow max-w-full h-auto max-h-[500px] object-contain"
+              loading="lazy"
+            />
+          )}
+        </span>
+      );
+    }
+  };
+
   return (
     <div className="py-20">
       <style jsx global>{`
@@ -270,82 +298,84 @@ export default function NewsContent({ news }) {
           </div>
         </div>
 
-        {/* 文章內容（Markdown 顯示，圖片自動置中） */}
-        <div className="p-2 overflow-auto">
-          <div className="prose prose-xl prose-slate dark:prose-invert max-w-none">
+        {/* 封面圖片 - 使用懶加載 */}
+        {/* {news.coverImage && (
+          <div className="my-8 rounded-xl overflow-hidden shadow-md">
+            <Image
+              src={news.coverImage}
+              alt={news.homeTitle}
+              width={1200}
+              height={600}
+              className="w-full h-auto rounded-xl object-cover"
+              priority={true} // 封面圖片優先載入
+              placeholder="blur"
+              blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+            />
+          </div>
+        )} */}
+
+        {/* 處理 Markdown 或 HTML 內容 */}
+        <div className="prose prose-zinc dark:prose-invert max-w-none">
+          {news.contentMD ? (
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeRaw]}
-              components={{
-                h1: ({ node, ...props }) => <h1 {...props} />,
-                h2: ({ node, ...props }) => <h2 {...props} />,
-                h3: ({ node, ...props }) => <h3 {...props} />,
-                h4: ({ node, ...props }) => <h4 {...props} />,
-                h5: ({ node, ...props }) => <h5 {...props} />,
-                h6: ({ node, ...props }) => <h6 {...props} />,
-                img: ({ node, ...props }) => {
-                  // 使用 span 替代 div，因為 div 不能是 p 的子元素
-                  return (
-                    <span className="block my-4">
-                      <img
-                        {...props}
-                        className="mx-auto rounded shadow max-w-full h-auto"
-                        onError={(e) => {
-                          e.target.onerror = null; // 防止循環錯誤
-                          e.target.src = "/placeholder.svg"; // 使用占位符圖片
-                        }}
-                      />
-                    </span>
-                  );
-                },
-                a: ({ href, children, ...props }) => {
-                  const isExternal = href && !href.startsWith("/");
-                  return (
-                    <a
-                      href={href}
-                      {...props}
-                      target={isExternal ? "_blank" : undefined}
-                      rel={isExternal ? "noopener noreferrer" : undefined}
-                      className="text-blue-600 dark:text-blue-400 underline"
-                    >
-                      {children}
-                    </a>
-                  );
-                },
-              }}
+              components={customRenderers}
             >
               {content}
             </ReactMarkdown>
-
-            {/* 參考資料區塊 */}
-            {news.references && news.references.length > 0 && (
-              <div className="mt-16 border-t border-gray-200 dark:border-gray-700 pt-8">
-                <h3 className="text-xl font-bold mb-6">參考資料</h3>
-                <div className="space-y-4">
-                  {news.references.map((ref, idx) => (
-                    <div key={ref.id || idx} className="flex items-start gap-2">
-                      <div className="mt-0.5 w-6 flex-shrink-0 text-gray-700 dark:text-gray-300">{idx + 1}.</div>
-                      <div className="flex-1">
-                        {ref.url ? (
-                          <a
-                            href={ref.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 dark:text-blue-400 hover:underline"
-                          >
-                            {ref.title || ref.url}
-                          </a>
-                        ) : (
-                          <span>{ref.title}</span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          ) : (
+            <div dangerouslySetInnerHTML={{ __html: content }} />
+          )}
         </div>
+
+        {/* 圖片列表 - 加入懶加載 */}
+        {/* {news.images && news.images.length > 0 && (
+          <section className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {news.images.map((img, index) => (
+              <div key={img.id || index} className="relative overflow-hidden rounded-lg shadow-md aspect-[4/3]">
+                <Image
+                  src={img.url}
+                  alt={`${news.title} - 圖片 ${index + 1}`}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  loading="lazy"
+                  placeholder="blur"
+                  blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+                />
+              </div>
+            ))}
+          </section>
+        )} */}
+
+        {/* 參考資料區塊 */}
+        {news.references && news.references.length > 0 && (
+          <div className="mt-16 border-t border-gray-200 dark:border-gray-700 pt-8">
+            <h3 className="text-xl font-bold mb-6">參考資料</h3>
+            <div className="space-y-4">
+              {news.references.map((ref, idx) => (
+                <div key={ref.id || idx} className="flex items-start gap-2">
+                  <div className="mt-0.5 w-6 flex-shrink-0 text-gray-700 dark:text-gray-300">{idx + 1}.</div>
+                  <div className="flex-1">
+                    {ref.url ? (
+                      <a
+                        href={ref.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        {ref.title || ref.url}
+                      </a>
+                    ) : (
+                      <span>{ref.title}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </article>
     </div>
   );
