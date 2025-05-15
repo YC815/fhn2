@@ -21,6 +21,48 @@ import { motion, useSpring, useTransform, useMotionValue } from "framer-motion";
  * @property {string} date - 發布日期
  */
 
+// 自定義圖片組件，解決載入過程中的色彩問題
+const AdaptiveImage = ({ src, alt, ...props }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isDark, setIsDark] = useState(false);
+
+  // 檢測深色模式
+  useEffect(() => {
+    // 初始檢測
+    setIsDark(document.documentElement.classList.contains('dark'));
+
+    // 監聽深色模式變化
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach(mutation => {
+        if (mutation.attributeName === 'class') {
+          setIsDark(document.documentElement.classList.contains('dark'));
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, { attributes: true });
+
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <>
+      {/* 背景色層，在圖片載入前顯示 */}
+      <div
+        className={`absolute inset-0 ${isDark ? 'bg-zinc-800' : 'bg-gray-200'} transition-opacity duration-300`}
+        style={{ opacity: isLoaded ? 0 : 1 }}
+      />
+      <Image
+        src={src}
+        alt={alt}
+        onLoadingComplete={() => setIsLoaded(true)}
+        className={`object-cover transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+        {...props}
+      />
+    </>
+  );
+};
+
 // 傾斜卡片組件
 const TiltCard = ({ children, className }) => {
   const x = useMotionValue(0);
@@ -471,7 +513,7 @@ export default function HomePage() {
                 Array.from({ length: 6 }).map((_, i) => (
                   <div
                     key={i}
-                    className="col-span-1 aspect-square rounded-xl overflow-hidden shadow-md border-2 bg-gray-200 dark:bg-zinc-800 
+                    className="col-span-1 aspect-square rounded-xl overflow-hidden shadow-md  bg-gray-200 dark:bg-zinc-800 
                      relative scale-95 transform-gpu"
                   >
                     {/* 模擬圖片區域 */}
@@ -513,15 +555,14 @@ export default function HomePage() {
                           prefetch={true}
                         >
                           {news.coverImage ? (
-                            <Image
+                            <AdaptiveImage
                               src={news.coverImage}
                               alt={news.homeTitle}
                               fill
-                              className="object-cover"
                               sizes="(max-width: 640px) 95vw, (max-width: 1024px) 45vw, 30vw"
                               loading={filteredNewsList.indexOf(news) < 3 ? undefined : "lazy"}
                               placeholder="blur"
-                              blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+                              blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPj/HwAEDQIEXXbLDwAAAABJRU5ErkJggg=="
                               priority={filteredNewsList.indexOf(news) < 3}
                             />
                           ) : (
@@ -585,10 +626,10 @@ export default function HomePage() {
 //                             .+hmmdddddddddddddddmmds/`      ``...`
 //                          `/hmddddddddddddddddddddddddmy++osyhyyyhhs.
 //                        `ommddddddddddddddddddddddddddddmmdys+++syhhh:
-//            .`         /mmddddddddddddddddddddddddddddddddmmhyyyyyyyyh/
-//        `:sdNy`      .ymddddddddddddddddddddddddddddddddddddmdhhhyyyyyh-
-//    `.+hmmmddmo     -mmddddddddddddddddddddddddddddddddddddddmmhhhhhhhh+
-//   odmmdddddddms` `+mmddddddddddddddddddddddddddddddddddddddddmmddhhhhh+
+//            .`         /mmddddddddddddddddddddddddddddmmhyyyyyyyyh/
+//        `:sdNy`      .ymddddddddddddddddddddddddddddddddmdhhhyyyyyh-
+//    `.+hmmmddmo     -mmddddddddddddddddddddddddddddddddddmmhhhhhhhh+
+//   odmmdddddddms` `+mmddddddddddddddddddddddddddddddddddddmmddhhhhh+
 //   ymdmmmmmmmmdmmdmmdddddddddddddmmddddddddddddddddddddddddddddmd:ydhhd:
 //   :Nmmmmmmmmmmmmmmddy+::+ydddms/:::/+osydmdddddddddddddddddddN-`:+o:
 //    ymmmmmmmmmmmmmmdo.`.``/hmm/+hdd/``````-+ydmdddddddddddddddddmy
