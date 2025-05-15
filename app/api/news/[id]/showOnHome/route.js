@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { clearCache } from "@/app/api/news/route";
+import { clearCache } from "@/lib/cache";
 
 export async function PATCH(request, context) {
   // 1. 從 URL 取得新聞 id - 注意使用 await
