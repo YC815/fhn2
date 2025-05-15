@@ -11,7 +11,7 @@ export default async function NewsPage({ params }) {
   const { id } = params;
 
   // 獲取當前主機信息，用於客戶端獲取數據
-  const headersList = headers();
+  const headersList = await headers();
   const host = headersList.get("host");
   const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
   const apiUrl = `${protocol}://${host}/api/news/${id}`;
