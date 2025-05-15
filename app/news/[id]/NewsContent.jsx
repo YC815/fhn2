@@ -74,15 +74,11 @@ export default function NewsContent({ news }) {
       return (
         <span className="block my-4 relative">
           {props.src ? (
-            <Image
+            <img
               src={props.src}
               alt={props.alt || ""}
-              width={600}
-              height={350}
               className="mx-auto rounded shadow max-w-full h-auto max-h-[500px] object-contain"
               loading="lazy"
-              placeholder="blur"
-              blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
             />
           ) : (
             <img

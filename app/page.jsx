@@ -287,6 +287,7 @@ export default function HomePage() {
                     key={news.id}
                     href={`/news/${news.id}`}
                     className="relative block aspect-square rounded-xl overflow-hidden shadow-md border-2 hover:shadow-lg transition-shadow"
+                    prefetch={true}
                   >
                     {news.coverImage ? (
                       <Image
