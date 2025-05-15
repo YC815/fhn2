@@ -5,6 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, X } from "lucide-react";
 import { fetchWithRetry } from "@/utils/fetchWithRetry";
 
+// 定義本地儲存的 key
+const LOCAL_STORAGE_KEY = 'cached-tags';
+const LOCAL_STORAGE_TIME_KEY = 'cached-tags-time';
+
+// 快取有效期（毫秒）：5分鐘
+const CACHE_TTL = 5 * 60 * 1000;
+
 export function TagSelector({ onChange, className = '' }) {
     const [selectedTags, setSelectedTags] = useState([]);
     const [allTags, setAllTags] = useState([]);
@@ -17,7 +24,23 @@ export function TagSelector({ onChange, className = '' }) {
             setError(null);
             setIsLoading(true);
 
-            // 獲取當前 hostname 和 port
+            // 先檢查本地快取
+            if (typeof window !== 'undefined') {
+                const cachedTags = localStorage.getItem(LOCAL_STORAGE_KEY);
+                const cachedTime = localStorage.getItem(LOCAL_STORAGE_TIME_KEY);
+                const now = Date.now();
+
+                // 檢查快取是否存在且未過期
+                if (cachedTags && cachedTime && now - parseInt(cachedTime) < CACHE_TTL) {
+                    console.log("使用本地快取的標籤");
+                    const parsedTags = JSON.parse(cachedTags);
+                    setAllTags(parsedTags);
+                    setIsLoading(false);
+                    return;
+                }
+            }
+
+            // 如果沒有可用的快取，則從API請求
             const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
             const apiUrl = `${baseUrl}/api/tags`;
             console.log("請求標籤 API:", apiUrl);
@@ -25,6 +48,12 @@ export function TagSelector({ onChange, className = '' }) {
             const data = await fetchWithRetry(apiUrl);
             console.log("API 回傳標籤資料:", data);
             setAllTags(data);
+
+            // 設置本地快取
+            if (typeof window !== 'undefined') {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+                localStorage.setItem(LOCAL_STORAGE_TIME_KEY, Date.now().toString());
+            }
         } catch (error) {
             console.error('Error fetching tags:', error);
             setError('無法載入標籤，請稍後再試');
@@ -55,6 +84,20 @@ export function TagSelector({ onChange, className = '' }) {
         const next = selectedTags.filter(t => t !== tag);
         setSelectedTags(next);
         onChange?.(next);
+    };
+
+    // 手動重新整理標籤的函數
+    const refreshTags = () => {
+        // 清除本地快取
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem(LOCAL_STORAGE_KEY);
+            localStorage.removeItem(LOCAL_STORAGE_TIME_KEY);
+        }
+
+        // 重新獲取標籤
+        setIsLoading(true);
+        setError(null);
+        fetchTags();
     };
 
     return (

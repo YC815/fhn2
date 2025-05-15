@@ -2,6 +2,44 @@
 import { NextResponse } from "next/server";
 import { prisma, testConnection } from "@/lib/prisma";
 
+// 新增記憶體快取機制
+const CACHE_TTL = 5 * 60 * 1000; // 快取有效時間（毫秒）：5分鐘
+const tagsCache = {
+  data: null,
+  timestamp: 0,
+};
+
+// 從快取中獲取結果，如果快取不存在或過期則返回 null
+function getFromCache() {
+  const now = Date.now();
+
+  // 檢查快取是否存在且未過期
+  if (tagsCache.data && now - tagsCache.timestamp < CACHE_TTL) {
+    console.log(
+      `🟢 從快取中獲取標籤結果，快取時間: ${new Date(
+        tagsCache.timestamp
+      ).toISOString()}`
+    );
+    return tagsCache.data;
+  }
+
+  return null;
+}
+
+// 設置快取
+function setCache(data) {
+  tagsCache.data = data;
+  tagsCache.timestamp = Date.now();
+  console.log(`🟢 已設置標籤快取，標籤數量: ${data.length}`);
+}
+
+// 清空快取
+function clearCache() {
+  tagsCache.data = null;
+  tagsCache.timestamp = 0;
+  console.log("🟢 已清空標籤快取");
+}
+
 // GET /api/tags
 export async function GET() {
   try {
@@ -14,6 +52,14 @@ export async function GET() {
       "- DATABASE_URL 長度:",
       process.env.DATABASE_URL ? process.env.DATABASE_URL.length : 0
     );
+
+    // 檢查快取
+    const cachedTags = getFromCache();
+    if (cachedTags) {
+      console.log(`✅ 從快取返回 ${cachedTags.length} 個標籤`);
+      console.log("=====================================================");
+      return NextResponse.json(cachedTags);
+    }
 
     // 使用連接測試函數
     const connectionTest = await testConnection();
@@ -32,6 +78,10 @@ export async function GET() {
 
     // 確保返回的是陣列
     const safeResult = Array.isArray(all) ? all : [];
+
+    // 設置快取
+    setCache(safeResult);
+
     return NextResponse.json(safeResult);
   } catch (error) {
     console.error("=====================================================");
@@ -134,6 +184,9 @@ export async function POST(request) {
 
     console.log(`✅ 成功創建標籤，ID: ${tag.id}, 名稱: ${tag.name}`);
     console.log("=====================================================");
+
+    // 清空快取因為有新標籤被創建
+    clearCache();
 
     return NextResponse.json(tag, { status: 201 });
   } catch (error) {
