@@ -24,46 +24,121 @@ export async function GET(request) {
     const tagsParam = searchParams.get("tags");
     console.log("標籤過濾參數:", tagsParam || "無");
 
-    // 使用 Prisma 獲取新聞列表
-    const filter = tagsParam
-      ? {
-          tags: { some: { name: { in: tagsParam.split(",") } } },
-        }
-      : {};
+    // 設置一個變數來保存最終返回結果
+    let finalResult = [];
 
-    console.log("🔄 正在測試資料庫連接...");
     try {
-      // 測試資料庫連接
-      await prisma.$queryRaw`SELECT 1`;
-      console.log("✅ 資料庫連接測試成功");
-    } catch (connError) {
-      console.error("❌ 資料庫連接測試失敗:", connError.message);
+      // 使用 Prisma 獲取新聞列表
+      const filter = tagsParam
+        ? {
+            tags: { some: { name: { in: tagsParam.split(",") } } },
+          }
+        : {};
+
+      console.log("🔄 正在測試資料庫連接...");
+      try {
+        // 測試資料庫連接
+        await prisma.$queryRaw`SELECT 1`;
+        console.log("✅ 資料庫連接測試成功");
+      } catch (connError) {
+        console.error("❌ 資料庫連接測試失敗:", connError.message);
+        console.error(
+          "詳細錯誤:",
+          JSON.stringify({
+            name: connError.name,
+            code: connError.code,
+            clientVersion: connError.clientVersion,
+            meta: connError.meta,
+          })
+        );
+        throw connError; // 重新拋出錯誤以使用 Supabase 備用方案
+      }
+
+      console.log("🔄 正在查詢新聞數據...");
+      console.time("新聞查詢耗時");
+
+      const list = await prisma.news.findMany({
+        where: filter,
+        include: { images: true, tags: true },
+        orderBy: { createdAt: "desc" },
+      });
+
+      console.timeEnd("新聞查詢耗時");
+      console.log(`✅ 成功使用 Prisma 獲取 ${list.length} 條新聞記錄`);
+
+      // 確保 list 是一個數組
+      finalResult = Array.isArray(list) ? list : [];
+    } catch (prismaError) {
       console.error(
-        "詳細錯誤:",
-        JSON.stringify({
-          name: connError.name,
-          code: connError.code,
-          clientVersion: connError.clientVersion,
-          meta: connError.meta,
-        })
+        "❌ Prisma 查詢失敗，嘗試使用 Supabase 備用方案:",
+        prismaError
       );
-      throw connError; // 重新拋出錯誤以繼續錯誤處理流程
+
+      try {
+        // 使用 Supabase 作為備用方案
+        console.log("🔄 使用 Supabase 備用方案查詢新聞...");
+
+        let query = supabase
+          .from("news")
+          .select(
+            `
+            *,
+            images (*),
+            news_tags (tag_id, tags (name))
+          `
+          )
+          .order("created_at", { ascending: false });
+
+        // 如果有標籤過濾
+        if (tagsParam) {
+          // 注意：這裡的實現可能與 Prisma 的不同，可能需要單獨查詢標籤
+          console.log(
+            `⚠️ 在 Supabase 備用方案中暫時忽略標籤過濾: ${tagsParam}`
+          );
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+          console.error("❌ Supabase 查詢失敗:", error);
+          throw error;
+        }
+
+        // 轉換數據格式以符合前端期望
+        const formattedList = data.map((item) => ({
+          id: item.id,
+          homeTitle: item.home_title || "",
+          title: item.title || "",
+          subtitle: item.subtitle || "",
+          contentMD: item.content_md || "",
+          contentHTML: item.content_html || "",
+          coverImage: item.cover_image || "",
+          createdAt: item.created_at || new Date().toISOString(),
+          updatedAt: item.updated_at || new Date().toISOString(),
+          images: item.images || [],
+          tags: (item.news_tags || []).map((nt) => ({
+            name: nt && nt.tags && nt.tags.name ? nt.tags.name : "未知標籤",
+          })),
+        }));
+
+        console.log(
+          `✅ 成功使用 Supabase 獲取 ${formattedList.length} 條新聞記錄`
+        );
+
+        // 更新最終結果
+        finalResult = Array.isArray(formattedList) ? formattedList : [];
+      } catch (supabaseError) {
+        console.error("❌ Supabase 查詢也失敗:", supabaseError);
+        console.log("返回空數組作為最後的解決方案");
+        // 保持 finalResult 為空數組
+      }
     }
 
-    console.log("🔄 正在查詢新聞數據...");
-    console.time("新聞查詢耗時");
-
-    const list = await prisma.news.findMany({
-      where: filter,
-      include: { images: true, tags: true },
-      orderBy: { createdAt: "desc" },
-    });
-
-    console.timeEnd("新聞查詢耗時");
-    console.log(`✅ 成功使用 Prisma 獲取 ${list.length} 條新聞記錄`);
+    console.log(
+      `🟢 GET /api/news API 完成 - 返回 ${finalResult.length} 條記錄`
+    );
     console.log("=====================================================");
-
-    return NextResponse.json(list);
+    return NextResponse.json(finalResult);
   } catch (error) {
     // 印出完整 error 物件
     console.error("=====================================================");
@@ -109,17 +184,8 @@ export async function GET(request) {
     console.error("堆棧跟踪:", error.stack);
     console.error("=====================================================");
 
-    return NextResponse.json(
-      {
-        error: "獲取新聞數據失敗",
-        details: error.message,
-        name: error.name,
-        // 完整回傳 error 內容（僅非生產環境時回傳 stack）
-        stack: process.env.NODE_ENV !== "production" ? error.stack : undefined,
-        raw: process.env.NODE_ENV !== "production" ? error : undefined,
-      },
-      { status: 500 }
-    );
+    // 即使出錯，也返回空數組，避免前端出錯
+    return NextResponse.json([]);
   }
 }
 

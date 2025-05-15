@@ -82,13 +82,16 @@ export async function GET(request, { params }) {
       // 轉換數據格式以符合現有前端需求
       const formattedRecord = {
         ...record,
-        homeTitle: record.home_title,
-        contentMD: record.content_md,
-        contentHTML: record.content_html,
-        coverImage: record.cover_image,
-        createdAt: record.created_at,
-        updatedAt: record.updated_at,
-        tags: record.news_tags.map((nt) => ({ name: nt.tags.name })),
+        homeTitle: record.home_title || "",
+        contentMD: record.content_md || "",
+        contentHTML: record.content_html || "",
+        coverImage: record.cover_image || "",
+        createdAt: record.created_at || new Date().toISOString(),
+        updatedAt: record.updated_at || new Date().toISOString(),
+        tags: (record.news_tags || []).map((nt) => ({
+          name: nt && nt.tags && nt.tags.name ? nt.tags.name : "未知標籤",
+        })),
+        references: record.references || [],
       };
 
       // 調試信息：檢查返回的數據結構
@@ -204,6 +207,16 @@ export async function PUT(request, { params }) {
       references = [],
     } = requestData;
 
+    // 確保陣列是有效的
+    const safeTagNames = Array.isArray(tagNames) ? tagNames : [];
+    const safeImagesToCreate = Array.isArray(imagesToCreate)
+      ? imagesToCreate
+      : [];
+    const safeImageIdsToDelete = Array.isArray(imageIdsToDelete)
+      ? imageIdsToDelete
+      : [];
+    const safeReferences = Array.isArray(references) ? references : [];
+
     // 測試 Supabase 客戶端連接
     try {
       console.log("🔄 正在測試 Supabase 連接...");
@@ -239,8 +252,10 @@ export async function PUT(request, { params }) {
               // 重置 tags 再 connectOrCreate
               tags: {
                 set: [],
-                connectOrCreate: tagNames
-                  .filter((name) => typeof name === "string") // 過濾掉非字符串的元素
+                connectOrCreate: safeTagNames
+                  .filter(
+                    (name) => typeof name === "string" && name.trim() !== ""
+                  ) // 過濾掉非字符串的元素
                   .map((name) => ({
                     where: { name },
                     create: { name },
@@ -248,11 +263,15 @@ export async function PUT(request, { params }) {
               },
               // 刪除舊圖 + 新增新圖
               images: {
-                deleteMany: { id: { in: imageIdsToDelete } },
-                create: imagesToCreate.map((img) => ({
-                  url: img.url,
-                  path: img.path,
-                })),
+                deleteMany: {
+                  id: { in: safeImageIdsToDelete.filter((id) => id) },
+                },
+                create: safeImagesToCreate
+                  .filter((img) => img && img.url && img.path) // 確保url和path存在
+                  .map((img) => ({
+                    url: img.url,
+                    path: img.path,
+                  })),
               },
             },
             include: {
@@ -267,13 +286,26 @@ export async function PUT(request, { params }) {
             where: { newsId: id },
           });
 
-          if (references && references.length > 0) {
+          if (safeReferences.length > 0) {
+            // 過濾有效的參考資料
+            const validReferences = safeReferences.filter(
+              (ref) =>
+                ref &&
+                typeof ref === "object" &&
+                ref.url &&
+                typeof ref.url === "string"
+            );
+
+            console.log(
+              `找到 ${validReferences.length} 個有效參考資料，準備新增`
+            );
+
             await Promise.all(
-              references.map((ref) =>
+              validReferences.map((ref) =>
                 tx.reference.create({
                   data: {
-                    url: ref.url,
-                    title: ref.title || "",
+                    url: ref.url.trim(),
+                    title: ref.title ? ref.title.trim() : "",
                     news: { connect: { id } },
                   },
                 })
@@ -316,12 +348,12 @@ export async function PUT(request, { params }) {
           const { error: updateError } = await supabase
             .from("news")
             .update({
-              home_title: homeTitle,
-              title,
-              subtitle,
-              content_md: contentMD,
-              content_html: contentHTML,
-              cover_image: coverImage,
+              home_title: homeTitle || "",
+              title: title || "",
+              subtitle: subtitle || "",
+              content_md: contentMD || "",
+              content_html: contentHTML || "",
+              cover_image: coverImage || "",
               updated_at: new Date().toISOString(),
             })
             .eq("id", id);
@@ -342,8 +374,8 @@ export async function PUT(request, { params }) {
           if (deleteTagsError) throw deleteTagsError;
 
           // 2.2 建立新標籤關聯
-          for (const tagName of tagNames.filter(
-            (name) => typeof name === "string"
+          for (const tagName of safeTagNames.filter(
+            (name) => typeof name === "string" && name.trim() !== ""
           )) {
             // 檢查標籤是否存在，不存在則創建
             const { data: existingTag, error: tagError } = await supabase
@@ -382,17 +414,22 @@ export async function PUT(request, { params }) {
 
           // 3. 處理圖片：刪除指定的圖片，並新增新的圖片
           // 3.1 刪除指定的圖片
-          if (imageIdsToDelete.length > 0) {
-            const { error: deleteImagesError } = await supabase
-              .from("images")
-              .delete()
-              .in("id", imageIdsToDelete);
+          if (safeImageIdsToDelete.length > 0) {
+            const validIds = safeImageIdsToDelete.filter((id) => id);
+            if (validIds.length > 0) {
+              const { error: deleteImagesError } = await supabase
+                .from("images")
+                .delete()
+                .in("id", validIds);
 
-            if (deleteImagesError) throw deleteImagesError;
+              if (deleteImagesError) throw deleteImagesError;
+            }
           }
 
           // 3.2 新增新圖片
-          for (const image of imagesToCreate) {
+          for (const image of safeImagesToCreate.filter(
+            (img) => img && img.url && img.path
+          )) {
             const { error: imageError } = await supabase.from("images").insert({
               url: image.url,
               path: image.path,
@@ -412,21 +449,11 @@ export async function PUT(request, { params }) {
           if (deleteRefsError) throw deleteRefsError;
 
           // 4.2 新增參考資料
-          if (references && references.length > 0) {
-            console.log(`🔍 處理 ${references.length} 筆參考資料...`);
-            console.log(
-              "參考資料預覽:",
-              references.map((ref) => ({
-                url:
-                  ref.url && ref.url.length > 30
-                    ? ref.url.substring(0, 30) + "..."
-                    : ref.url,
-                title: ref.title,
-              }))
-            );
+          if (safeReferences.length > 0) {
+            console.log(`🔍 處理 ${safeReferences.length} 筆參考資料...`);
 
             // 檢查參考資料結構有效性
-            const validReferences = references.filter(
+            const validReferences = safeReferences.filter(
               (ref) =>
                 ref &&
                 typeof ref === "object" &&
@@ -434,10 +461,21 @@ export async function PUT(request, { params }) {
                 typeof ref.url === "string"
             );
 
-            if (validReferences.length !== references.length) {
+            console.log(
+              "參考資料預覽:",
+              validReferences.map((ref) => ({
+                url:
+                  ref.url && ref.url.length > 30
+                    ? ref.url.substring(0, 30) + "..."
+                    : ref.url,
+                title: ref.title || "",
+              }))
+            );
+
+            if (validReferences.length !== safeReferences.length) {
               console.warn(
                 `⚠️ 發現 ${
-                  references.length - validReferences.length
+                  safeReferences.length - validReferences.length
                 } 筆無效的參考資料`
               );
             }
@@ -503,63 +541,28 @@ export async function PUT(request, { params }) {
           );
           console.log("- updated.images 數量:", updated?.images?.length || 0);
 
-          // 檢查 news_tags 結構完整性
-          if (updated?.news_tags) {
-            console.log("🔍 檢查 news_tags 結構:");
-            for (let i = 0; i < updated.news_tags.length; i++) {
-              const nt = updated.news_tags[i];
-              console.log(`[${i}] nt:`, nt ? "存在" : "不存在");
-              console.log(`[${i}] nt.tags:`, nt?.tags ? "存在" : "不存在");
-              console.log(`[${i}] nt.tags.name:`, nt?.tags?.name || "(無)");
-            }
-          }
-
           // 轉換資料格式以符合前端期望
           try {
             const formattedNews = {
               ...updated,
-              homeTitle: updated.home_title,
-              contentMD: updated.content_md,
-              contentHTML: updated.content_html,
-              coverImage: updated.cover_image,
-              createdAt: updated.created_at,
-              updatedAt: updated.updated_at,
-              tags:
-                updated?.news_tags?.map((nt) => {
-                  if (!nt || !nt.tags) {
-                    console.error("❌ 發現無效的 news_tag 項目:", nt);
-                    return { name: "未知標籤" };
-                  }
-                  return { name: nt.tags.name || "未知標籤" };
-                }) || [],
+              homeTitle: updated.home_title || "",
+              contentMD: updated.content_md || "",
+              contentHTML: updated.content_html || "",
+              coverImage: updated.cover_image || "",
+              createdAt: updated.created_at || new Date().toISOString(),
+              updatedAt: updated.updated_at || new Date().toISOString(),
+              tags: (updated?.news_tags || []).map((nt) => {
+                if (!nt || !nt.tags) {
+                  console.error("❌ 發現無效的 news_tag 項目:", nt);
+                  return { name: "未知標籤" };
+                }
+                return { name: nt.tags.name || "未知標籤" };
+              }),
+              references: updated?.references || [],
+              images: updated?.images || [],
             };
 
             console.log("✅ 成功格式化數據回傳");
-
-            // 檢查格式化後資料
-            console.log("🔍 檢查格式化後數據結構:");
-            console.log("- formattedNews 存在:", Boolean(formattedNews));
-            console.log(
-              "- formattedNews.homeTitle:",
-              formattedNews?.homeTitle || "(空)"
-            );
-            console.log(
-              "- formattedNews.contentMD 長度:",
-              formattedNews?.contentMD ? formattedNews.contentMD.length : 0
-            );
-            console.log(
-              "- formattedNews.contentHTML 長度:",
-              formattedNews?.contentHTML ? formattedNews.contentHTML.length : 0
-            );
-            console.log(
-              "- formattedNews.tags 數量:",
-              formattedNews?.tags?.length || 0
-            );
-            console.log(
-              "- formattedNews.images 數量:",
-              formattedNews?.images?.length || 0
-            );
-
             console.log(`[API] News with id ${id} updated with Supabase`);
             return NextResponse.json(formattedNews);
           } catch (formatError) {
@@ -577,107 +580,25 @@ export async function PUT(request, { params }) {
           );
           console.error("錯誤類型:", supabaseError.name);
           console.error("錯誤消息:", supabaseError.message);
-          console.error("錯誤代碼:", supabaseError.code);
+          console.error("錯誤代碼:", supabaseError.code || "無");
           console.error("錯誤詳情:", supabaseError.details || "無");
-
-          // 詳細記錄 Supabase 錯誤對象的所有屬性
-          try {
-            console.error("完整錯誤對象屬性:");
-            for (const key in supabaseError) {
-              if (Object.prototype.hasOwnProperty.call(supabaseError, key)) {
-                console.error(`- ${key}:`, supabaseError[key]);
-              }
-            }
-          } catch (e) {
-            console.error("無法詳細記錄錯誤對象屬性");
-          }
-
-          // 檢查是否為 Supabase 錯誤
-          if (supabaseError.code && supabaseError.code.startsWith("PGRST")) {
-            console.error("⚠️ Supabase PostgreSQL 錯誤，可能是權限問題");
-          }
-
-          // 檢查是否為內容過大錯誤
-          let errorMessage = supabaseError.message || "未知錯誤";
-          if (
-            supabaseError.message &&
-            (supabaseError.message.includes("too large") ||
-              supabaseError.message.includes("exceeds") ||
-              supabaseError.message.includes("size") ||
-              supabaseError.message.includes("limit"))
-          ) {
-            console.error("⚠️ 可能是內容過大導致的錯誤");
-            console.error("建議：縮減內容長度或分割為多個記錄");
-            errorMessage = "內容可能過大，請縮減文章長度或分割為多個記錄";
-          }
-
-          // 檢查是否為無效數據結構錯誤
-          if (
-            supabaseError.message &&
-            (supabaseError.message.includes("undefined") ||
-              supabaseError.message.includes("null") ||
-              supabaseError.message.includes("not an object") ||
-              supabaseError.message.includes("cannot read property"))
-          ) {
-            console.error("⚠️ 可能是數據結構問題");
-            console.error("建議：檢查數據結構是否完整");
-            errorMessage = "數據結構問題，請確保所有必要欄位都存在且格式正確";
-          }
-
-          console.error("堆棧跟踪:", supabaseError.stack);
           console.error(
             "====================================================="
           );
 
           // 拋出更明確的錯誤
-          throw new Error(`更新失敗: ${errorMessage}`);
+          throw new Error(`更新失敗: ${supabaseError.message || "未知錯誤"}`);
         }
       }
     } catch (error) {
       // 最終錯誤處理
       console.error("=====================================================");
       console.error(
-        `🔴 PUT /api/news/${params.id} 總體錯誤 (${new Date().toISOString()}):`
+        `🔴 PUT /api/news/${id} 總體錯誤 (${new Date().toISOString()}):`
       );
       console.error("錯誤類型:", error.name);
       console.error("錯誤消息:", error.message);
       console.error("錯誤堆棧:", error.stack);
-
-      // 檢查是否包含內部錯誤信息
-      if (error.message && error.message.includes("更新失敗:")) {
-        console.error("檢測到內部錯誤訊息，可能是內部處理問題");
-      }
-
-      // 檢查是否為資料庫連接問題
-      if (
-        error.message &&
-        (error.message.includes("connect") ||
-          error.message.includes("connection") ||
-          error.message.includes("timeout"))
-      ) {
-        console.error("⚠️ 可能是資料庫連接問題");
-      }
-
-      // 檢查是否為權限問題
-      if (
-        error.message &&
-        (error.message.includes("permission") ||
-          error.message.includes("access") ||
-          error.message.includes("forbidden") ||
-          error.message.includes("not allowed"))
-      ) {
-        console.error("⚠️ 可能是資料庫權限問題");
-      }
-
-      // 檢查請求和返回頭信息 (如果存在)
-      if (error.config) {
-        console.error("請求配置:", {
-          url: error.config.url,
-          method: error.config.method,
-          headers: error.config.headers,
-        });
-      }
-
       console.error("=====================================================");
 
       // 嘗試提供更清晰的錯誤消息給客戶端
@@ -705,7 +626,7 @@ export async function PUT(request, { params }) {
       );
     }
   } catch (outerError) {
-    // 未預期的錯誤處理，基本上不應該到這一層
+    // 未預期的錯誤處理
     console.error("=====================================================");
     console.error(
       `🔴 PUT /api/news/${params.id} 未預期錯誤 (${new Date().toISOString()}):`
@@ -736,11 +657,30 @@ export async function DELETE(request, { params }) {
       Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL)
     );
 
+    // 驗證ID的有效性
+    if (!id) {
+      console.error("❌ 缺少有效的新聞ID");
+      return NextResponse.json({ error: "缺少有效的新聞ID" }, { status: 400 });
+    }
+
     // 先嘗試使用 Prisma
     try {
       // 測試資料庫連接
       await prisma.$queryRaw`SELECT 1`;
       console.log("[API] 資料庫連接測試成功");
+
+      // 確認新聞存在
+      const existingNews = await prisma.news.findUnique({
+        where: { id },
+      });
+
+      if (!existingNews) {
+        console.log(`[API] 新聞 ID ${id} 不存在，無法刪除`);
+        return NextResponse.json(
+          { error: "找不到指定新聞", details: "指定的新聞不存在或已被刪除" },
+          { status: 404 }
+        );
+      }
 
       // 在 Prisma 中刪除新聞（關聯將通過資料庫關係自動處理）
       await prisma.news.delete({
@@ -757,37 +697,73 @@ export async function DELETE(request, { params }) {
 
       // 如果 Prisma 失敗，嘗試使用 Supabase
       try {
+        // 先檢查新聞是否存在
+        const { data: existingNews, error: checkError } = await supabase
+          .from("news")
+          .select("id")
+          .eq("id", id)
+          .maybeSingle();
+
+        if (checkError) {
+          console.error("❌ 檢查新聞存在性失敗:", checkError);
+          throw checkError;
+        }
+
+        if (!existingNews) {
+          console.log(`[API] 新聞 ID ${id} 不存在，無法刪除`);
+          return NextResponse.json(
+            { error: "找不到指定新聞", details: "指定的新聞不存在或已被刪除" },
+            { status: 404 }
+          );
+        }
+
         // 1. 刪除相關的標籤關聯
+        console.log("🔄 刪除標籤關聯...");
         const { error: tagDeleteError } = await supabase
           .from("news_tags")
           .delete()
           .eq("news_id", id);
 
-        if (tagDeleteError) throw tagDeleteError;
+        if (tagDeleteError && !tagDeleteError.message.includes("no rows")) {
+          console.error("❌ 刪除標籤關聯失敗:", tagDeleteError);
+          throw tagDeleteError;
+        }
 
         // 2. 刪除相關的圖片
+        console.log("🔄 刪除相關圖片...");
         const { error: imageDeleteError } = await supabase
           .from("images")
           .delete()
           .eq("news_id", id);
 
-        if (imageDeleteError) throw imageDeleteError;
+        if (imageDeleteError && !imageDeleteError.message.includes("no rows")) {
+          console.error("❌ 刪除相關圖片失敗:", imageDeleteError);
+          throw imageDeleteError;
+        }
 
         // 3. 刪除相關的參考資料
+        console.log("🔄 刪除參考資料...");
         const { error: refDeleteError } = await supabase
           .from("references")
           .delete()
           .eq("news_id", id);
 
-        if (refDeleteError) throw refDeleteError;
+        if (refDeleteError && !refDeleteError.message.includes("no rows")) {
+          console.error("❌ 刪除參考資料失敗:", refDeleteError);
+          throw refDeleteError;
+        }
 
         // 4. 最後刪除新聞本身
+        console.log("🔄 刪除新聞本體...");
         const { error: newsDeleteError } = await supabase
           .from("news")
           .delete()
           .eq("id", id);
 
-        if (newsDeleteError) throw newsDeleteError;
+        if (newsDeleteError) {
+          console.error("❌ 刪除新聞失敗:", newsDeleteError);
+          throw newsDeleteError;
+        }
 
         console.log(
           `[API] News with id ${id} deleted successfully with Supabase`
@@ -796,15 +772,29 @@ export async function DELETE(request, { params }) {
       } catch (supabaseError) {
         console.error("Error in Supabase deletion:", supabaseError);
         return NextResponse.json(
-          { error: "刪除新聞失敗", details: supabaseError.message },
+          {
+            error: "刪除新聞失敗",
+            details: supabaseError.message || "無法刪除新聞，請稍後再試",
+          },
           { status: 500 }
         );
       }
     }
   } catch (error) {
-    console.error("Error deleting news:", error);
+    console.error("=====================================================");
+    console.error(
+      `🔴 DELETE /api/news/${params.id} 錯誤 (${new Date().toISOString()}):`
+    );
+    console.error("錯誤類型:", error.name);
+    console.error("錯誤消息:", error.message);
+    console.error("錯誤堆棧:", error.stack);
+    console.error("=====================================================");
+
     return NextResponse.json(
-      { error: "伺服器內部錯誤", details: error.message },
+      {
+        error: "伺服器內部錯誤",
+        details: "刪除新聞時發生錯誤，請稍後再試或聯絡系統管理員",
+      },
       { status: 500 }
     );
   }
