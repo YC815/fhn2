@@ -33,6 +33,7 @@ model News {
   coverImage  String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  showOnHome  Boolean  @default(false) // 是否在主頁顯示，預設為否
 
   // 圖片（一對多）
   images Image[]

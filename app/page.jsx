@@ -494,80 +494,82 @@ export default function HomePage() {
                   <p className="text-red-500 dark:text-red-400">{error}</p>
                 </div>
               ) : filteredNewsList.length > 0 ? (
-                filteredNewsList.map((news) => (
-                  <TiltCard
-                    key={news.id}
-                    className="col-span-1 scale-95 transform-gpu"
-                  >
-                    <motion.div
-                      whileHover={{ scale: 1.015 }}
-                      whileTap={{ scale: 0.95 }}
-                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                      className="w-full h-full overflow-hidden rounded-xl"
+                filteredNewsList
+                  .filter((news) => news.showOnHome) // 只顯示 showOnHome 為 true 的新聞
+                  .map((news) => (
+                    <TiltCard
+                      key={news.id}
+                      className="col-span-1 scale-95 transform-gpu"
                     >
-                      <Link
-                        href={`/news/${news.id}`}
-                        className="relative block aspect-square rounded-xl overflow-hidden shadow-md border border-stone-300 dark:border-stone-700 hover:shadow-lg transition-shadow w-full h-full"
-                        prefetch={true}
+                      <motion.div
+                        whileHover={{ scale: 1.015 }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                        className="w-full h-full overflow-hidden rounded-xl"
                       >
-                        {news.coverImage ? (
-                          <Image
-                            src={news.coverImage}
-                            alt={news.homeTitle}
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 640px) 95vw, (max-width: 1024px) 45vw, 30vw"
-                            loading={filteredNewsList.indexOf(news) < 3 ? undefined : "lazy"}
-                            placeholder="blur"
-                            blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
-                            priority={filteredNewsList.indexOf(news) < 3}
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-                            <span className="text-zinc-400">無封面圖片</span>
-                          </div>
-                        )}
-                        <motion.div
-                          className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent text-white p-4 space-y-2"
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.1, duration: 0.3 }}
+                        <Link
+                          href={`/news/${news.id}`}
+                          className="relative block aspect-square rounded-xl overflow-hidden shadow-md border border-stone-300 dark:border-stone-700 hover:shadow-lg transition-shadow w-full h-full"
+                          prefetch={true}
                         >
+                          {news.coverImage ? (
+                            <Image
+                              src={news.coverImage}
+                              alt={news.homeTitle}
+                              fill
+                              className="object-cover"
+                              sizes="(max-width: 640px) 95vw, (max-width: 1024px) 45vw, 30vw"
+                              loading={filteredNewsList.indexOf(news) < 3 ? undefined : "lazy"}
+                              placeholder="blur"
+                              blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+                              priority={filteredNewsList.indexOf(news) < 3}
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                              <span className="text-zinc-400">無封面圖片</span>
+                            </div>
+                          )}
                           <motion.div
-                            className="flex gap-2 flex-wrap text-xs"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.2, duration: 0.3 }}
-                          >
-                            {news.tags.slice(0, 3).map((tag, index) => (
-                              <motion.span
-                                key={tag.name}
-                                className="bg-white/20 px-2 py-0.5 rounded"
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.2 + index * 0.1, duration: 0.2 }}
-                                whileHover={{
-                                  backgroundColor: "rgba(255, 255, 255, 0.3)",
-                                  scale: 1.05
-                                }}
-                              >
-                                #{tag.name}
-                              </motion.span>
-                            ))}
-                          </motion.div>
-                          <motion.h3
-                            className="text-xl font-bold line-clamp-2"
-                            initial={{ opacity: 0, y: 10 }}
+                            className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent text-white p-4 space-y-2"
+                            initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.3, duration: 0.3 }}
+                            transition={{ delay: 0.1, duration: 0.3 }}
                           >
-                            {news.homeTitle}
-                          </motion.h3>
-                        </motion.div>
-                      </Link>
-                    </motion.div>
-                  </TiltCard>
-                ))
+                            <motion.div
+                              className="flex gap-2 flex-wrap text-xs"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: 0.2, duration: 0.3 }}
+                            >
+                              {news.tags.slice(0, 3).map((tag, index) => (
+                                <motion.span
+                                  key={tag.name}
+                                  className="bg-white/20 px-2 py-0.5 rounded"
+                                  initial={{ opacity: 0, x: -10 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: 0.2 + index * 0.1, duration: 0.2 }}
+                                  whileHover={{
+                                    backgroundColor: "rgba(255, 255, 255, 0.3)",
+                                    scale: 1.05
+                                  }}
+                                >
+                                  #{tag.name}
+                                </motion.span>
+                              ))}
+                            </motion.div>
+                            <motion.h3
+                              className="text-xl font-bold line-clamp-2"
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.3, duration: 0.3 }}
+                            >
+                              {news.homeTitle}
+                            </motion.h3>
+                          </motion.div>
+                        </Link>
+                      </motion.div>
+                    </TiltCard>
+                  ))
               ) : null}
             </section>
           </div>

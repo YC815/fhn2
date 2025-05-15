@@ -4,6 +4,7 @@ import { UserButton, useUser, useAuth } from "@clerk/nextjs";
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Switch } from "@/components/ui/switch";
 
 // 管理員電子郵件白名單
 const ADMIN_EMAILS = [
@@ -23,6 +24,7 @@ export default function AdminDashboard() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [newsToDelete, setNewsToDelete] = useState(null);
+  const [loadingItems, setLoadingItems] = useState({});
 
   // 檢查登入狀態和權限
   useEffect(() => {
@@ -259,7 +261,7 @@ export default function AdminDashboard() {
                         {new Date(newsItem.createdAt).toLocaleDateString()}
                       </p>
                     </div>
-                    <div className="flex space-x-2">
+                    <div className="flex space-x-2 items-center">
                       <Link
                         href={`/admin/edit/${newsItem.id}`}
                         className="p-2 text-blue-600 dark:text-blue-400 hover:text-blue-800"
@@ -276,6 +278,54 @@ export default function AdminDashboard() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                       </button>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={newsItem.showOnHome}
+                          onCheckedChange={async (checked) => {
+                            try {
+                              // 設置此項目的載入狀態
+                              setLoadingItems(prev => ({ ...prev, [newsItem.id]: true }));
+
+                              const res = await fetch(`/api/news/${newsItem.id}/showOnHome`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ showOnHome: checked }),
+                              });
+
+                              if (res.ok) {
+                                console.log(`更新成功：${newsItem.title} showOnHome = ${checked}`);
+                                // 更新本地狀態，避免重新獲取整個列表
+                                setNewsList(prev =>
+                                  prev.map(item =>
+                                    item.id === newsItem.id
+                                      ? { ...item, showOnHome: checked }
+                                      : item
+                                  )
+                                );
+                              } else {
+                                console.error(`更新失敗：${newsItem.title}`);
+                                alert("更新顯示狀態失敗，請重試");
+                              }
+                            } catch (err) {
+                              console.error("請求失敗", err);
+                              alert("更新顯示狀態失敗：" + err.message);
+                            } finally {
+                              // 清除此項目的載入狀態
+                              setLoadingItems(prev => ({ ...prev, [newsItem.id]: false }));
+                            }
+                          }}
+                          aria-label={newsItem.showOnHome ? "在主頁隱藏" : "在主頁顯示"}
+                        />
+                        {loadingItems[newsItem.id] ? (
+                          <div className="flex items-center justify-center w-16">
+                            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-500 dark:border-blue-400"></div>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-500 dark:text-zinc-300">
+                            {newsItem.showOnHome ? "主頁顯示" : "主頁隱藏"}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
