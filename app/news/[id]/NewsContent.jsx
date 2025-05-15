@@ -81,25 +81,7 @@ export default function NewsContent({ news, newsId, apiUrl }) {
 
   // AdSense 廣告加載
   useEffect(() => {
-    // 僅在客戶端且內容載入完成後執行
-    if (typeof window !== 'undefined' && contentReady) {
-      // 載入 Google AdSense 腳本
-      const script = document.createElement('script');
-      script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9993759051139856';
-      script.async = true;
-      script.crossOrigin = 'anonymous';
-      document.head.appendChild(script);
-
-      // 初始化廣告
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-
-      return () => {
-        // 清理腳本
-        if (script.parentNode) {
-          document.head.removeChild(script);
-        }
-      };
-    }
+    // Google AdSense相關代碼已移除
   }, [contentReady]);
 
   // 調試信息：檢查 news 對象的內容
@@ -197,18 +179,6 @@ export default function NewsContent({ news, newsId, apiUrl }) {
           返回主頁
         </a>
       </div>
-    </div>
-  );
-
-  // 側邊廣告組件
-  const SidebarAd = () => (
-    <div className="sidebar-ad sticky top-24 h-full">
-      <ins className="adsbygoogle"
-        style={{ display: 'block', minHeight: '600px' }}
-        data-ad-client="ca-pub-9993759051139856"
-        data-ad-slot="2598555200"
-        data-ad-format="auto"
-        data-full-width-responsive="true"></ins>
     </div>
   );
 
@@ -362,17 +332,6 @@ export default function NewsContent({ news, newsId, apiUrl }) {
         .dark .prose table td {
           border-color: hsl(215, 20.2%, 15.1%);
         }
-        
-        .sidebar-ad {
-          min-width: 300px;
-          min-height: 600px;
-        }
-        
-        @media (max-width: 1280px) {
-          .sidebar-ad {
-            display: none;
-          }
-        }
       `}</style>
 
       {/* 返回主頁按鈕 - 始終顯示 */}
@@ -401,7 +360,7 @@ export default function NewsContent({ news, newsId, apiUrl }) {
         </a>
       </div>
 
-      {/* 使用 flex 布局來包含主內容和側邊廣告 */}
+      {/* 使用 flex 布局來包含主內容 */}
       <div className="relative max-w-5xl mx-auto px-4 lg:px-8">
         <div className="flex justify-center">
           {/* 主要內容區 */}
@@ -501,11 +460,6 @@ export default function NewsContent({ news, newsId, apiUrl }) {
               <LoadingSkeleton />
             )}
           </article>
-
-          {/* 側邊廣告區域 - 僅在大屏幕上顯示 */}
-          <div className="hidden xl:block xl:absolute xl:right-8 xl:w-72">
-            {contentReady && <SidebarAd />}
-          </div>
         </div>
       </div>
     </div>
