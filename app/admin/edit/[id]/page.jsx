@@ -106,7 +106,7 @@ export default function EditNewsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-white dark:bg-zinc-900">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900 dark:border-gray-100"></div>
         {retryCount > 0 && (
           <p className="ml-4 text-gray-600 dark:text-gray-300">
@@ -119,7 +119,7 @@ export default function EditNewsPage() {
 
   if (error) {
     return (
-      <div className="p-8 text-center">
+      <div className="p-8 text-center bg-white dark:bg-zinc-900 min-h-screen">
         <h2 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">
           載入失敗
         </h2>
