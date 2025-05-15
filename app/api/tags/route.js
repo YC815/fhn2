@@ -1,6 +1,6 @@
 // app/api/tags/route.js
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, testConnection } from "@/lib/prisma";
 
 // GET /api/tags
 export async function GET() {
@@ -15,25 +15,10 @@ export async function GET() {
       process.env.DATABASE_URL ? process.env.DATABASE_URL.length : 0
     );
 
-    // 測試資料庫連接
-    try {
-      await prisma.$queryRaw`SELECT 1`;
-      console.log("✅ Prisma 資料庫連接測試成功");
-    } catch (connError) {
-      console.error("❌ Prisma 資料庫連接測試失敗:", connError.message);
-      console.error(
-        "詳細錯誤:",
-        JSON.stringify(
-          {
-            name: connError.name,
-            code: connError.code,
-            clientVersion: connError.clientVersion,
-          },
-          null,
-          2
-        )
-      );
-      throw new Error(`資料庫連接失敗: ${connError.message}`);
+    // 使用連接測試函數
+    const connectionTest = await testConnection();
+    if (!connectionTest.success) {
+      throw new Error(`資料庫連接失敗: ${connectionTest.error.message}`);
     }
 
     console.log("🔄 正在查詢標籤...");
@@ -72,12 +57,18 @@ export async function GET() {
     console.error("堆棧跟踪:", error.stack);
     console.error("=====================================================");
 
+    // 在生產環境中返回更簡潔的錯誤信息
+    const isProd = process.env.NODE_ENV === "production";
     return NextResponse.json(
       {
         error: "獲取標籤失敗",
         details: errorDetails,
-        name: error.name,
-        stack: process.env.NODE_ENV !== "production" ? error.stack : undefined,
+        ...(isProd
+          ? {}
+          : {
+              name: error.name,
+              stack: error.stack,
+            }),
       },
       { status: statusCode }
     );
@@ -115,13 +106,10 @@ export async function POST(request) {
 
     console.log("嘗試創建標籤:", name);
 
-    // 測試資料庫連接
-    try {
-      await prisma.$queryRaw`SELECT 1`;
-      console.log("✅ Prisma 資料庫連接測試成功");
-    } catch (connError) {
-      console.error("❌ Prisma 資料庫連接測試失敗:", connError.message);
-      throw new Error(`資料庫連接失敗: ${connError.message}`);
+    // 使用連接測試函數
+    const connectionTest = await testConnection();
+    if (!connectionTest.success) {
+      throw new Error(`資料庫連接失敗: ${connectionTest.error.message}`);
     }
 
     console.log("🔄 檢查標籤是否存在...");
@@ -169,8 +157,19 @@ export async function POST(request) {
     console.error("堆棧跟踪:", error.stack);
     console.error("=====================================================");
 
+    // 在生產環境中返回更簡潔的錯誤信息
+    const isProd = process.env.NODE_ENV === "production";
     return NextResponse.json(
-      { error: "創建標籤失敗", details: errorDetails },
+      {
+        error: "創建標籤失敗",
+        details: errorDetails,
+        ...(isProd
+          ? {}
+          : {
+              name: error.name,
+              stack: error.stack,
+            }),
+      },
       { status: statusCode }
     );
   }

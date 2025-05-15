@@ -1,6 +1,6 @@
 // app/api/news/route.js
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, testConnection } from "@/lib/prisma";
 
 // GET /api/news?tags=AI,新聞
 export async function GET(request) {
@@ -28,13 +28,10 @@ export async function GET(request) {
       skip,
     });
 
-    // 測試資料庫連接
-    try {
-      await prisma.$queryRaw`SELECT 1`;
-      console.log("✅ 資料庫連接測試成功");
-    } catch (connError) {
-      console.error("❌ 資料庫連接測試失敗:", connError);
-      throw new Error(`資料庫連接失敗: ${connError.message}`);
+    // 使用連接測試函數
+    const connectionTest = await testConnection();
+    if (!connectionTest.success) {
+      throw new Error(`資料庫連接失敗: ${connectionTest.error.message}`);
     }
 
     // 分析標籤參數
@@ -111,8 +108,19 @@ export async function GET(request) {
 
     console.error("=====================================================");
 
+    // 在生產環境中返回更簡潔的錯誤信息
+    const isProd = process.env.NODE_ENV === "production";
     return NextResponse.json(
-      { error: "獲取新聞列表失敗", details: errorDetails },
+      {
+        error: "獲取新聞列表失敗",
+        details: errorDetails,
+        ...(isProd
+          ? {}
+          : {
+              name: error.name,
+              stack: error.stack,
+            }),
+      },
       { status: statusCode }
     );
   }
@@ -184,13 +192,10 @@ export async function POST(request) {
     // 確保 tagNames 是陣列
     const safeTagNames = Array.isArray(tagNames) ? tagNames : [];
 
-    // 測試資料庫連接
-    try {
-      await prisma.$queryRaw`SELECT 1`;
-      console.log("✅ 資料庫連接測試成功");
-    } catch (connError) {
-      console.error("❌ 資料庫連接測試失敗:", connError.message);
-      throw new Error(`資料庫連接失敗: ${connError.message}`);
+    // 使用連接測試函數
+    const connectionTest = await testConnection();
+    if (!connectionTest.success) {
+      throw new Error(`資料庫連接失敗: ${connectionTest.error.message}`);
     }
 
     // 創建新聞
@@ -243,8 +248,19 @@ export async function POST(request) {
 
     console.error("=====================================================");
 
+    // 在生產環境中返回更簡潔的錯誤信息
+    const isProd = process.env.NODE_ENV === "production";
     return NextResponse.json(
-      { error: "創建新聞失敗", details: errorDetails },
+      {
+        error: "創建新聞失敗",
+        details: errorDetails,
+        ...(isProd
+          ? {}
+          : {
+              name: error.name,
+              stack: error.stack,
+            }),
+      },
       { status: statusCode }
     );
   }

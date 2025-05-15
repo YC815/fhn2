@@ -1,6 +1,6 @@
 // app/api/news/[id]/route.js
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, testConnection } from "@/lib/prisma";
 
 // GET /api/news/:id
 export async function GET(request, { params }) {
@@ -15,13 +15,10 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: "缺少有效的新聞ID" }, { status: 400 });
     }
 
-    // 測試資料庫連接
-    try {
-      await prisma.$queryRaw`SELECT 1`;
-      console.log("資料庫連接測試成功");
-    } catch (connError) {
-      console.error("❌ 資料庫連接測試失敗:", connError.message);
-      throw new Error(`資料庫連接失敗: ${connError.message}`);
+    // 使用連接測試函數
+    const connectionTest = await testConnection();
+    if (!connectionTest.success) {
+      throw new Error(`資料庫連接失敗: ${connectionTest.error.message}`);
     }
 
     const record = await prisma.news.findUnique({
@@ -71,8 +68,19 @@ export async function GET(request, { params }) {
 
     console.error("=====================================================");
 
+    // 在生產環境中返回更簡潔的錯誤信息
+    const isProd = process.env.NODE_ENV === "production";
     return NextResponse.json(
-      { error: "查詢新聞失敗", details: errorDetails },
+      {
+        error: "查詢新聞失敗",
+        details: errorDetails,
+        ...(isProd
+          ? {}
+          : {
+              name: error.name,
+              stack: error.stack,
+            }),
+      },
       { status: statusCode }
     );
   }
@@ -183,13 +191,10 @@ export async function PUT(request, { params }) {
       : [];
     const safeReferences = Array.isArray(references) ? references : [];
 
-    // 測試資料庫連接
-    try {
-      await prisma.$queryRaw`SELECT 1`;
-      console.log("✅ 資料庫連接測試成功");
-    } catch (connError) {
-      console.error("❌ 資料庫連接測試失敗:", connError.message);
-      throw new Error(`資料庫連接失敗: ${connError.message}`);
+    // 使用連接測試函數
+    const connectionTest = await testConnection();
+    if (!connectionTest.success) {
+      throw new Error(`資料庫連接失敗: ${connectionTest.error.message}`);
     }
 
     // 檢查新聞是否存在
@@ -313,8 +318,19 @@ export async function PUT(request, { params }) {
 
     console.error("=====================================================");
 
+    // 在生產環境中返回更簡潔的錯誤信息
+    const isProd = process.env.NODE_ENV === "production";
     return NextResponse.json(
-      { error: "更新新聞失敗", details: errorDetails },
+      {
+        error: "更新新聞失敗",
+        details: errorDetails,
+        ...(isProd
+          ? {}
+          : {
+              name: error.name,
+              stack: error.stack,
+            }),
+      },
       { status: statusCode }
     );
   }
@@ -333,13 +349,10 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: "缺少有效的新聞ID" }, { status: 400 });
     }
 
-    // 測試資料庫連接
-    try {
-      await prisma.$queryRaw`SELECT 1`;
-      console.log("[API] 資料庫連接測試成功");
-    } catch (connError) {
-      console.error("❌ 資料庫連接測試失敗:", connError.message);
-      throw new Error(`資料庫連接失敗: ${connError.message}`);
+    // 使用連接測試函數
+    const connectionTest = await testConnection();
+    if (!connectionTest.success) {
+      throw new Error(`資料庫連接失敗: ${connectionTest.error.message}`);
     }
 
     // 確認新聞存在
@@ -384,8 +397,19 @@ export async function DELETE(request, { params }) {
 
     console.error("=====================================================");
 
+    // 在生產環境中返回更簡潔的錯誤信息
+    const isProd = process.env.NODE_ENV === "production";
     return NextResponse.json(
-      { error: "刪除新聞失敗", details: errorDetails },
+      {
+        error: "刪除新聞失敗",
+        details: errorDetails,
+        ...(isProd
+          ? {}
+          : {
+              name: error.name,
+              stack: error.stack,
+            }),
+      },
       { status: statusCode }
     );
   }
