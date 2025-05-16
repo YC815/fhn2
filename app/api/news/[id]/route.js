@@ -230,6 +230,7 @@ export async function PUT(request, { params }) {
       imagesToCreate = [],
       imageIdsToDelete = [],
       references = [],
+      isTechNews = false,
     } = requestData;
 
     // 確保陣列是有效的
@@ -266,20 +267,13 @@ export async function PUT(request, { params }) {
     const updatedNews = await prisma.news.update({
       where: { id },
       data: {
-        homeTitle,
+        homeTitle: homeTitle || "",
         title,
-        subtitle,
+        subtitle: subtitle || "",
         contentMD,
-        contentHTML,
-        coverImage,
-      },
-    });
-
-    // 步驟 2: 更新標籤
-    console.log(`[API] 步驟 2: 處理標籤關聯 (${safeTagNames.length} 個標籤)`);
-    await prisma.news.update({
-      where: { id },
-      data: {
+        contentHTML: contentHTML || "",
+        coverImage: coverImage || "",
+        isTechNews: Boolean(isTechNews),
         tags: {
           set: [],
           connectOrCreate: safeTagNames
@@ -292,7 +286,7 @@ export async function PUT(request, { params }) {
       },
     });
 
-    // 步驟 3: 處理刪除圖片
+    // 步驟 2: 處理刪除圖片
     if (safeImageIdsToDelete.length > 0) {
       console.log(
         `[API] 步驟 3: 刪除舊圖片 (${safeImageIdsToDelete.length} 張)`

@@ -188,6 +188,7 @@ export async function POST(request) {
       contentHTML,
       coverImage,
       tagNames = [],
+      isTechNews = false,
     } = data;
 
     if (!title || !title.trim()) {
@@ -224,6 +225,7 @@ export async function POST(request) {
         contentMD,
         contentHTML: contentHTML || "",
         coverImage: coverImage || "",
+        isTechNews: Boolean(isTechNews),
         // 處理標籤
         tags: {
           connectOrCreate: safeTagNames
