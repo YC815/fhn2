@@ -280,6 +280,7 @@ export default function HomePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredNewsList, setFilteredNewsList] = useState([]);
   const [sortOrder, setSortOrder] = useState("newest"); // newest 或 oldest
+  const [showTechNews, setShowTechNews] = useState(true); // 新增：是否顯示技術新聞
 
   // 獲取新聞數據
   useEffect(() => {
@@ -359,6 +360,11 @@ export default function HomePage() {
       );
     }
 
+    // 根據技術新聞篩選設定過濾
+    if (!showTechNews) {
+      filtered = filtered.filter((news) => !news.isTechNews);
+    }
+
     // 再依據排序選項排序
     const sorted = [...filtered].sort((a, b) => {
       // 優先使用日期字段進行排序
@@ -388,7 +394,7 @@ export default function HomePage() {
     });
 
     setFilteredNewsList(sorted);
-  }, [searchTerm, newsList, sortOrder]);
+  }, [searchTerm, newsList, sortOrder, showTechNews]);
 
   // 處理標籤變化
   const handleTagChange = (tags) => {
@@ -451,7 +457,22 @@ export default function HomePage() {
             <div className="max-w-5xl mx-auto">
               <div className="flex flex-col items-center">
                 <div className="flex justify-between w-full max-w-2xl mb-2">
-                  <TagSelector onChange={handleTagChange} className="flex-1" />
+                  <div className="flex items-center space-x-4 flex-1">
+                    <TagSelector onChange={handleTagChange} className="flex-1" />
+                    {/* 新增：技術新聞篩選勾選框 */}
+                    <label className="flex items-center space-x-2 text-sm text-zinc-600 dark:text-zinc-400  whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={showTechNews}
+                        onChange={(e) => setShowTechNews(e.target.checked)}
+                        className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 
+                                 text-blue-600 focus:ring-blue-500 
+                                 dark:bg-zinc-700 dark:checked:bg-blue-600"
+                      />
+                      <span>科技新聞</span>
+                    </label>
+                  </div>
+                  <div className="ml-2 relative"></div>
                   {/* 添加排序選擇器 */}
                   <div className="ml-2 relative">
                     <select
@@ -649,16 +670,4 @@ export default function HomePage() {
 //        `+hhhhhyyyyhhs-----y--o/------:+hyyyyhhyyys-``....```..--..//`
 //          `.:+oossyyyy:---:ssoy:------+hyyyyhhyyys-`````..``````-o.
 //                     syysyysssho:-----ohyyyyhyhhyy/`````..``````-o.
-//                    `hssssssoyhhyo+++syyhhhhyyhyyh+:::-..-:::::::.
-//                    :hysssyo/yhhssyysssssyhyhhhyhdmmy....`
-//                    shyyyyyyhhhhyyyyyyyyyyhh/-+syhdo`
-//                   `hhhhhhhhhhhhhhhhhhhhhhhhy`
-//                    -:yhyyyysyhhyyyyyyyyyyyyh-
-//                      -hysssssyydsyyssssssssyh.
-//                       /hsysyyyyd-.+yyyssyyssyh-
-//           -/+oo++/-`   +hhyhhhso`  .ohyyyyyyhho:`   `-:/++++/:.
-//        -+ooooooooooso+/ssss.yy:      `//+ds/oysss+ossoooooooo+os/.
-//     `:o+:/oooooooooooooooossyh:          oyyssooooooooooooooo+/:os+`
-//    -ssoooooooooooooooooosssssy+          .hyssssssooooooooooooooooss-
-//    /syysssssssssssssssyyyyyyyh-           shyyyysyyysssssssssssssssyy
-//      `-/+ossyyyysso+/:-./++//.             .---` `.-:/+oossssoo++/:-`
+//                    `

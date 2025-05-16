@@ -105,6 +105,7 @@ export default function NewsEditor({ initialData }) {
   const [isDragging, setIsDragging] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [isTechNews, setIsTechNews] = useState(initialData?.isTechNews || false);
 
   const [homeTitle, setHomeTitle] = useState(initialData?.homeTitle || "");
   const [title, setTitle] = useState(initialData?.title || "");
@@ -462,6 +463,7 @@ export default function NewsEditor({ initialData }) {
         contentHTML: content,
         coverImage: coverImage?.url || null,
         tagNames: Array.isArray(selectedTags) ? selectedTags : [],
+        isTechNews: isTechNews,
         images: images.map((img) => ({
           id: img.id,
           url: img.url,
@@ -658,6 +660,24 @@ export default function NewsEditor({ initialData }) {
           onChange={(e) => setTitle(e.target.value)}
           className="w-full"
         />
+      </div>
+
+      {/* 新增：科技新聞勾選框 */}
+      <div className="space-y-2">
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="isTechNews"
+            checked={isTechNews}
+            onChange={(e) => setIsTechNews(e.target.checked)}
+            className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 
+                     text-blue-600 focus:ring-blue-500 
+                     dark:bg-zinc-700 dark:checked:bg-blue-600"
+          />
+          <Label htmlFor="isTechNews" className="text-sm text-zinc-600 dark:text-zinc-400">
+            科技新聞
+          </Label>
+        </div>
       </div>
 
       <div className="space-y-2">
