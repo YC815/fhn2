@@ -292,9 +292,13 @@ export default function NewsContent({ news, newsId, apiUrl }) {
         }
 
         .prose a {
-          text-decoration-thickness: 1px;
-          text-underline-offset: 2px;
+          color: #3b82f6;
+          text-decoration: none;
           transition: color 0.2s ease;
+        }
+
+        .prose a:hover {
+          color: #2563eb;
         }
 
         .prose pre {
